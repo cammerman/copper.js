@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en-US">
+	<head>
+		<title>JS Infrastructure Tests - View</title>
+		<link href="qunit.css" rel="stylesheet" type="text/css" />
+
+		<script src="jquery-1.7.1.min.js" type="text/javascript"></script>
+		<script src="underscore-1.2.2.min.js" type="text/javascript"></script>
+		<script src="qunit.js" type="text/javascript"></script>
+		<script src="infrastructure.js" type="text/javascript"></script>
+	</head>
+	<body>
+		<h1 id="qunit-header">JS Infrastructure Tests - View</h1>
+		<h2 id="qunit-banner"></h2>
+		<div id="qunit-testrunner-toolbar"></div>
+		<h2 id="qunit-userAgent"></h2>
+		<ol id="qunit-tests"></ol>
+		<div id="qunit-fixture">
+			<a id="helloAnchor" href="#" />
+			<button id="helloButton" />
+			<input id="helloInputSubmit" type="submit" />
+			<input id="helloInputButton" type="button" />
+			<input id="helloInputReset" type="reset" />
+			<p id="dynamicContent"></p>
+			<input id="dynamicInput" type="text" />
+			<div id="subView">
+			</div>
+		</div>
+	</body>
+	<script>
+		module('Observable');
+
+		test('Given initial value, when constructed, accessor yields initial value.', function () {
+			// Arrange
+			var value = 'SomethingSomething',
+				subject;
+
+			// Act
+			subject = new Observable(value);
+
+			// Assert
+			equal(subject.val(), value);
+		});
+
+		test('Given initial value, when new value set, accessor yields new value.', function () {
+			// Arrange
+			var replacementValue = 'SomethingNew',
+				subject = new Observable('SomethingSomething');
+
+			// Act
+			subject.val(replacementValue);
+
+			// Assert
+			equal(subject.val(), replacementValue);
+		});
+
+		test('Given subscription, when new value set, handler called with new value.', function () {
+			// Arrange
+			var replacementValue = 'SomethingNew',
+				subject = new Observable('SomethingSomething'),
+				storedByHandler = undefined;
+
+			subject.subscribe(function (newValue) {
+				storedByHandler = newValue;
+			});
+
+			// Act
+			subject.val(replacementValue);
+
+			// Assert
+			equal(storedByHandler, replacementValue);
+		});
+
+		test('Given multiple subscriptions, when new value set, handlers all called with new value.', function () {
+			// Arrange
+			var replacementValue = 'SomethingNew',
+				subject = new Observable('SomethingSomething'),
+				storedByHandlers = [],
+				handlerCount = 7;
+
+			_.range(0, handlerCount).forEach(function () {
+				subject.subscribe(function (newValue) {
+					storedByHandlers.push(newValue);
+				});
+			});
+
+			// Act
+			subject.val(replacementValue);
+
+			// Assert
+			ok(storedByHandlers.length == handlerCount
+				&& _(storedByHandlers).without(replacementValue).length == 0);
+		});
+
+		test('Given multiple subscriptions, and given a handler is unsubscribed, when new value set, handlers all called with new value.', function () {
+			// Arrange
+			var replacementValue = 'SomethingNew',
+				subject = new Observable('SomethingSomething'),
+				handler1Called = false,
+				handler1 = function () { handler1Called = true },
+				handler2Called = false,
+				handler2 = function () { handler2Called = true }
+
+			subject.subscribe(handler1);
+			subject.subscribe(handler2);
+
+			// Act
+			subject.unsubscribe(handler1);
+			subject.val(replacementValue);
+
+			// Assert
+			ok(handler2Called && !handler1Called);
+		});
+
+		test('Given multiple subscriptions, and given release was called, when new value set, handlers all called with new value.', function () {
+			// Arrange
+			var replacementValue = 'SomethingNew',
+				subject = new Observable('SomethingSomething'),
+				handler1Called = false,
+				handler1 = function () { handler1Called = true },
+				handler2Called = false,
+				handler2 = function () { handler2Called = true }
+
+			subject.subscribe(handler1);
+			subject.subscribe(handler2);
+
+			// Act
+			subject.release();
+			subject.val(replacementValue);
+
+			// Assert
+			ok(!handler1Called && !handler2Called);
+		});
+		
+		module('SmartEvent');
+
+		test('ctor / Given name / Initializes name property to specified value', function () {
+			// Arrange
+			var name = 'SecurityBreach',
+				subject;
+
+			// Act
+			subject = new SmartEvent(name);
+
+			// Assert
+			equal(subject.name, name);
+		});
+
+		test('ctor / Initializes handlers property to empty', function () {
+			// Arrange
+			var subject;
+
+			// Act
+			subject = new SmartEvent();
+
+			// Assert
+			deepEqual(subject.handlers, []);
+		});
+
+		test('subscribe / Given function / Adds handler to handlers list', function () {
+			// Arrange
+			var subject = new SmartEvent(),
+				handler = function () { };
+
+			// Act
+			subject.subscribe(handler);
+
+			// Assert
+			deepEqual(subject.handlers, [handler]);
+		});
+
+		test('subscribe / Given function already added / Does not add handler again', function () {
+			// Arrange
+			var subject = new SmartEvent(),
+				handler1 = function () { },
+				handler2 = function () { };
+
+			subject.subscribe(handler1);
+			subject.subscribe(handler2);
+
+			// Act
+			subject.subscribe(handler1);
+
+			// Assert
+			deepEqual(subject.handlers, [handler1, handler2]);
+		});
+
+		test('subscribe / Given a non-function value / Does nothing', function () {
+			// Arrange
+			var subject = new SmartEvent();
+
+			// Act
+			subject.subscribe({ something: 'not a function' });
+
+			// Assert
+			deepEqual(subject.handlers, []);
+		});
+
+		test('unsubscribe / Given a function already added / Removes handler', function () {
+			// Arrange
+			var subject = new SmartEvent(),
+				handler1 = function () { },
+				handler2 = function () { };
+
+			subject.subscribe(handler1);
+			subject.subscribe(handler2);
+
+			// Act
+			subject.unsubscribe(handler2);
+
+			// Assert
+			deepEqual(subject.handlers, [handler1]);
+		});
+
+		test('unsubscribe / Given a function not yet added / Does nothing', function () {
+			// Arrange
+			var subject = new SmartEvent(),
+				handler1 = function () { },
+				handler2 = function () { };
+
+			subject.subscribe(handler1);
+			
+			// Act
+			subject.unsubscribe(handler2);
+
+			// Assert
+			deepEqual(subject.handlers, [handler1]);
+		});
+
+		test('unsubscribe / Given a non-function value / Does nothing', function () {
+			// Arrange
+			var subject = new SmartEvent(),
+				handler = function () { };
+
+			subject.subscribe(handler);
+
+			// Act
+			subject.unsubscribe({ something: 'not a function' });
+
+			// Assert
+			deepEqual(subject.handlers, [handler]);
+		});
+
+		test('raise / Calls each subscribed function', function () {
+			// Arrange
+			var subject = new SmartEvent(),
+				handler1Called = false,
+				handler1 = function () { handler1Called = true },
+				handler2Called = false,
+				handler2 = function () { handler2Called = true },
+				handler3Called = false,
+				handler3 = function () { handler3Called = true };
+
+			subject.subscribe(handler1);
+			subject.subscribe(handler2);
+			subject.subscribe(handler3);
+
+			// Act
+			subject.raise();
+
+			// Assert
+			ok(_([handler1Called, handler2Called, handler3Called]).all(function (item) { return item; }));
+		});
+		
+		module('View');
+
+		givenModelWithFunctionProperty = function (propertyName, propertyFunction, continueTest) {
+			var model = {};
+			model[propertyName] = propertyFunction;
+			continueTest(model);
+		}
+
+		test('Given a model with a function property with name the same ID as an anchor in the HTML / When anchor clicked / Calls the function ', function () {
+			// Arrange
+			var called = false,
+				propertyName = 'helloAnchor',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var subject = new View({ model: model });
+
+				// Act
+				$('#' + propertyName).click();
+			});
+
+			// Assert
+			ok(called);
+		});
+
+		test('Given a model with a function property with name the same ID as a button in the HTML / When button clicked / Calls the function ', function () {
+			// Arrange
+			var called = false,
+				propertyName = 'helloButton',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var subject = new View({ model: model });
+
+				// Act
+				$('#' + propertyName).click();
+			});
+
+			// Assert
+			ok(called);
+		});
+
+		test('Given a model with a function property with name the same ID as a submit input in the HTML / When submit input clicked / Calls the function ', function () {
+			// Arrange
+			var called = false,
+				propertyName = 'helloInputSubmit',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var subject = new View({ model: model });
+
+				// Act
+				$('#' + propertyName).click();
+			});
+
+			// Assert
+			ok(called);
+		});
+
+		test('Given a model with a function property with name the same ID as a button input in the HTML / When button input clicked / Calls the function ', function () {
+			// Arrange
+			var called = false,
+				propertyName = 'helloInputButton',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var subject = new View({ model: model });
+
+				// Act
+				$('#' + propertyName).click();
+			});
+
+			// Assert
+			ok(called);
+		});
+
+		test('Given a model with a function property with name the same ID as a reset input in the HTML / When reset input clicked / Calls the function ', function () {
+			// Arrange
+			var called = false,
+				propertyName = 'helloInputReset',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var subject = new View({ model: model });
+
+				// Act
+				$('#' + propertyName).click();
+			});
+
+			// Assert
+			ok(called);
+		});
+
+
+		test('Given a model with a function property with name not found in HTML / Constructor does not throw', function () {
+			expect(1);
+
+			// Arrange
+			var propertyName = 'iDoNotExist';
+
+			givenModelWithFunctionProperty(propertyName, function () { }, function (model) {
+				var subject = new View({ model: model });
+
+				// Assert
+				ok(true);
+			});
+		});
+
+		var givenModelWithObservableProperty = function (propertyName, initialValue, continueTest) {
+			var model = {};
+			model[propertyName] = new Observable(initialValue);
+			continueTest(model);
+		};
+
+		var givenTagWithIdContainsText = function (id, content, continueTest) {
+			$('#' + id).html(content);
+			continueTest();
+		};
+
+		var givenInputWithIdHasValue = function (id, value, continueTest) {
+			$('#' + id).val(value);
+			continueTest();
+		};
+
+		test('Given a model with an Observable property with name the same ID as an element in the HTML / When observable changes / HTML element content is changed to match observable value', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'dynamicContent',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(propertyName, oldContent, function () {
+					var subject = new View({ model: model });
+
+					// Act
+					model[propertyName].val(newContent);
+
+					// Assert
+					equal($('#' + propertyName).html(), newContent);
+				});
+			});
+		});
+
+		test('Given a model with an Observable property with name the same ID as an input in the HTML / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					var subject = new View({ model: model });
+					$('#' + propertyName).val(newValue);
+
+					// Act
+					$('#' + propertyName).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
+
+		test('Given a model with an Observable property with name not found in HTML / Constructor does not throw', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'iDoNotExist',
+				initialValue = 'blah',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				var subject = new View({ model: model });
+
+				// Act
+				model[propertyName].val(newContent);
+
+				// Assert
+				ok(true);
+			});
+		});
+
+		// Test HTML scoping.
+		test('Given a model with an Observable property with name the same ID as an input outside the scope / When input changes / Observable value does not change', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					var subject = new View({
+						model: model,
+						$documentScope: $('#subView')
+					});
+
+					$('#' + propertyName).val(newValue);
+
+					// Act
+					$('#' + propertyName).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), initialValue);
+				});
+			});
+		});
+
+		test('Given an extension source object with a property / Constructor yields view with that property', function () {
+			// Arrange
+			var called = false,
+				subject = new View({
+					model: {},
+					extend: {
+						doSomething: function () { called = true; }
+					}
+				});
+
+			// Act
+			subject.doSomething();
+
+			// Assert
+			ok(called);
+		});
+
+		test('Given an extension source object with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
+			// Arrange
+			var called = false,
+				extendSource,
+				subject,
+				propertyName = 'dynamicInput';
+
+			extendSource = {};
+			extendSource[propertyName + '_ViewChanged'] = function () { called = true; };
+
+			subject = new View({
+				model: {},
+				extend: extendSource
+			});
+
+			// Act
+			$('#' + propertyName).trigger('change');
+
+			// Assert
+			ok(called);
+		});
+
+		test('Given an extension source object with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Clicking the button calls the property from the extension source.', function () {
+			// Arrange
+			var called = false,
+				extendSource,
+				subject,
+				propertyName = 'helloButton';
+
+			extendSource = {};
+			extendSource[propertyName + '_Clicked'] = function () { called = true; };
+
+			subject = new View({
+				model: {},
+				extend: extendSource
+			});
+
+			// Act
+			$('#' + propertyName).trigger('click');
+
+			// Assert
+			ok(called);
+		});
+	</script>
+</html>
