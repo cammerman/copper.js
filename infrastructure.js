@@ -1,4 +1,4 @@
-solder = (function(undefined) {
+solder = (function($, undefined) {
 	var Observable,
 		SmartEvent,
 		View,
@@ -128,12 +128,25 @@ solder = (function(undefined) {
 
 		construct.prototype = {
 			tryBind: function (view, model) { return false; },
+			
 			_isClickable: function ($element) {
 				return $element.is(this._clickableSelector);
 			},
 
 			_isInput: function ($element) {
 				return $element.is(this._inputSelector);
+			},
+			
+			_select: function (view, selector) {
+				if (view.$documentScope) {
+					return view.$documentScope.filter(selector);
+				} else {
+					return $(selector);
+				}
+			},
+
+			_findViewElement: function (view, id) {
+				return this._select(view, '#' + id);
 			},
 		};
 
@@ -191,7 +204,7 @@ solder = (function(undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindElement(property, propertyName);
+					return this._tryBindElement(view, property, propertyName);
 				} else if (typeof property == "function") {
 					handler = function (e) {
 						if (e && (typeof e.preventDefault == "function")) {
@@ -201,20 +214,20 @@ solder = (function(undefined) {
 						property.call(model);
 					};
 					
-					return this._tryBindClick(propertyName, handler);
+					return this._tryBindClick(view, propertyName, handler);
 				}
 				
 				return false;
 			},
 			
-			_tryBindElement: function (property, propertyName) {
-				$element = this._findViewElement(propertyName);
+			_tryBindElement: function (view, property, propertyName) {
+				$element = this._findViewElement(view, propertyName);
 
 				if ($element) {
-					if (this._tryBindInputToObservableProperty($element, property, propertyName)) {
+					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
 						return true;
 					} else {
-						this._bindContent($element, property, propertyName);
+						this._bindContent(view, $element, property, propertyName);
 						return true;
 					}
 				}
@@ -222,7 +235,7 @@ solder = (function(undefined) {
 				return false;
 			},
 			
-			_tryBindInputToObservableProperty: function ($element, property, propertyName) {
+			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
 				var scope = this,
 					newProperty = propertyName + '_ModelChanged',
 					callback
@@ -231,7 +244,7 @@ solder = (function(undefined) {
 					callback = function (newValue) {
 						$element.val(newValue);
 					};
-					this[newProperty] = callback;
+					view[newProperty] = callback;
 					property.subscribe(callback);
 					
 					return true;
@@ -240,33 +253,33 @@ solder = (function(undefined) {
 				return false;
 			},
 			
-			_bindContent: function ($element, property, propertyName) {
+			_bindContent: function (view, $element, property, propertyName) {
 				var callback = function (newValue) {
 					$element.html(newValue);
 				};
 
-				this[propertyName + '_ModelChanged'] = callback;
+				view[propertyName + '_ModelChanged'] = callback;
 
 				property.subscribe(callback);
 			},
 			
-			_tryBindClick: function (propertyName, callback) {
-				$element = this._findViewElement(propertyName);
+			_tryBindClick: function (view, propertyName, callback) {
+				$element = this._findViewElement(view, propertyName);
 
 				if ($element && this._isClickable($element)) {
-					this._bindClick($element, propertyName, callback);
+					this._bindClick(view, $element, propertyName, callback);
 					return true;
 				}
 
 				return false;
 			},
 			
-			_bindClick: function ($element, propertyName, callback) {
-				var handler = function () {
-					callback();
+			_bindClick: function (view, $element, propertyName, callback) {
+				var handler = function (e) {
+					callback(e);
 				};
 
-				this[propertyName + 'Clicked'] = handler;
+				view[propertyName + '_Clicked'] = handler;
 
 				$element.click(handler);
 			}
@@ -285,7 +298,7 @@ solder = (function(undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindChangeEvent(property, propertyName);
+					return this._tryBindChangeEvent(view, property, propertyName);
 				}
 				
 				return false;
@@ -295,7 +308,7 @@ solder = (function(undefined) {
 				var scope = this,
 					handlerName = propertyName + '_ModelChanged';
 
-				if (this[handlerName] != undefined) {
+				if (view[handlerName] != undefined) {
 					property.subscribe(function (newValue) {
 						view[handlerName](newValue);
 					});
@@ -325,28 +338,16 @@ solder = (function(undefined) {
 				
 				throw new BindPipelineStepException({
 					message: 'Model property binding step is not implemented.',
-					subject: view._$documentScope,
+					subject: view.$documentScope,
 					member: member || this._selector
 				});
-			},
-			
-			_select: function (view) {
-				if (view._$documentScope) {
-					return view._$documentScope.filter(this._selector);
-				} else {
-					return $(this._selector);
-				}
-			},
-
-			_findViewElement: function (id) {
-				return this._select('#' + id);
 			},
 			
 			tryBind: function(view, model, state) {
 				var scope = this,
 					propertyName;
 					
-				_(scope._select(view))
+				_(scope._select(view, scope._selector))
 					.forEach(function (element) {
 						var $el = $(element);
 						
@@ -369,12 +370,11 @@ solder = (function(undefined) {
 		
 		construct.prototype = new BindHtmlElementStep({
 			_tryBindElement: function (view, model, $el) {
-				var scope = this,
-					id = $el.attr('id'),
+				var id = $el.attr('id'),
 					newProperty = id + '_ViewChanged',
 					callback;
 
-				if (scope[newProperty] != undefined) {
+				if (id != undefined && view[newProperty] != undefined) {
 					$el.change(function (e) {
 						view[newProperty](e);
 					});
@@ -396,19 +396,19 @@ solder = (function(undefined) {
 		
 		construct.prototype = new BindHtmlElementStep({
 			_tryBindElement: function (view, model, $el) {
-				return scope._tryBindInputToModel($el, model);
+				return this._tryBindInputToModel(view, $el, model);
 			},
 			
-			_tryBindInputToModel: function ($element, model) {
+			_tryBindInputToModel: function (view, $element, model) {
 				var id = $element.attr('id');
 				var property = model[id];
 
-				if (property != undefined) {
+				if (id != undefined && property != undefined) {
 					if (property instanceof Observable) {
-						this._bindOvervablePropertyToInput($element, property, id);
+						this._bindOvervablePropertyToInput(view, $element, property, id);
 						return true;
 					} else if (typeof property != "function") {
-						this._bindSimplePropertyToInput($element, model, id);
+						this._bindSimplePropertyToInput(view, $element, model, id);
 						return true;
 					}
 				}
@@ -416,24 +416,24 @@ solder = (function(undefined) {
 				return false;
 			},
 			
-			_bindOvervablePropertyToInput: function ($element, property, propertyName) {
+			_bindOvervablePropertyToInput: function (view, $element, property, propertyName) {
 				var handlerName = propertyName + '_ViewChanged';
 					callback = function (e) {
 						property.val($(this).val());
 					};
 
-				this[handlerName] = callback;
+				view[handlerName] = callback;
 
 				$element.change(callback);
 			},
 
-			_bindSimplePropertyToInput: function ($element, model, propertyName) {
+			_bindSimplePropertyToInput: function (view, $element, model, propertyName) {
 				var handlerName = propertyName + '_ViewChanged',
 					callback = function (e) {
 						model[propertyName] = $(e.target).val();
 					};
 
-				this[handlerName] = callback;
+				view[handlerName] = callback;
 
 				$element.change(callback);
 			}
@@ -449,18 +449,17 @@ solder = (function(undefined) {
 		
 		construct.prototype = new BindHtmlElementStep({
 			_tryBindElement: function (view, model, $el) {
-				var scope = this,
-					id = $el.attr('id'),
+				var id = $el.attr('id'),
 					handlerName = id + '_Clicked',
 					callback;
 
-				if (scope[handlerName] != undefined) {
+				if (id != undefined && view[handlerName] != undefined) {
 					$el.click(function (e) {
 						if (e.preventDefault != undefined) {
 							e.preventDefault();
 						}
 
-						scope[handlerName](e);
+						view[handlerName](e);
 					});
 
 					return true;
@@ -472,273 +471,45 @@ solder = (function(undefined) {
 		
 		return construct;
 	})();
+	
+	BindModelDirectlyStep = (function () {
+		var construct = function () { };
 		
-	BindPipeline = [
-		new BindModelToViewHandlersStep(),
-		new BindModelToHtmlStep(),
-		new BindInputsToViewHandlersStep(),
-		new BindInputsToModelStep(),
-		new BindClickablesToViewHandlersStep()
-	];
-
-	View = (function () {
-		construct = function (init) {
-			this._inputSelector = 'select, input[type!=button], input[type!=reset], input[type!=file]';
-			this._clickableSelector = 'a, button, input[type=submit], input[type=button], input[type=reset]';
-
-			Extender.extendDeep(this, init.extend, true);
-			if (init.extend
-				&& init.extend._bindModel
-				&& typeof init.extend._bindModel == 'function') {
-				this._bindExtendedModel = init.extend._bindModel;
+		construct.prototype = new BindPipelineStep({
+			tryBind: function (view, model) {
+				if (typeof view.bindModel == 'function') {
+					view.bindModel(model);
+				}
 			}
-
-			this._$documentScope = init.$documentScope;
-
-			if (this._bindHtml != undefined) {
-				this._bindHtml();
-			}
-
-			this._bindModel(init.model);
-			this._bindClickablesToViewHandlers();
-		};
-
-		construct.prototype = {
-			_bindModel: function (model) {
-				var scope = this,
-					propertyName,
-					property,
-					bound;
-
-				for (propertyName in model) {
-					scope._tryBindProperty(model, propertyName);
-				}
-
-				this._bindInputsToModelProperties(model);
-
-				if (this._bindExtendedModel) {
-					this._bindExtendedModel(model);
-				}
-			},
-
-			_bindInputsToModelProperties: function (model) {
-				var scope = this;
-				_(scope._select(scope._inputSelector))
-					.forEach(function (element) {
-						var $el = $(element);
-
-						if (scope._tryBindInputToModel($el, model)) {
-							return;
-						} else {
-							scope._tryBindInputToViewHandler($el);
-							return
-						}
-					});
-			},
-
-			_bindClickablesToViewHandlers: function () {
-				var scope = this;
-				_(scope._select(scope._clickableSelector))
-					.forEach(function (element) {
-						var $el = $(element);
-
-						if (scope._isClickable($el)) {
-							if (scope._tryBindClickableToViewHandler($el)) {
-								return;
-							}
-						}
-					});
-			},
-
-			_tryBindProperty: function (model, propertyName) {
-				var property = model[propertyName];
-
-				if (property instanceof Observable) {
-					if (this._tryBindElement(property, propertyName)) {
-						return;
-					}
-				} else if (typeof property == "function") {
-					this._tryBindClick(propertyName, function (e) {
-						if (e && (typeof e.preventDefault == "function")) {
-							e.preventDefault();
-						}
-
-						property.call(model);
-					});
-				}
-			},
-
-			_tryBindElement: function (property, propertyName) {
-				$element = this._findViewElement(propertyName);
-
-				if ($element) {
-					if (this._tryBindInputToObservableProperty($element, property, propertyName)) {
-						return true;
-					} else {
-						this._bindContent($element, property, propertyName);
-						return true;
-					}
-				}
-
-				return false;
-			},
-
-			_tryBindInputToObservableProperty: function ($element, property, propertyName) {
-				if ($element.is(this._inputSelector)) {
-					this._bindInputToObservableProperty($element, property, propertyName);
-					return true;
-				}
-
-				return false;
-			},
-
-			_bindInputToObservableProperty: function ($element, property, propertyName) {
-				var scope = this,
-					newProperty = propertyName + '_ModelChanged',
-					callback;
-
-				if (this[newProperty] == undefined) {
-					callback = function (newValue) {
-						$element.val(newValue);
-					};
-					this[newProperty] = callback;
-					property.subscribe(callback);
-				} else {
-					property.subscribe(function (newValue) {
-						scope[newProperty](newValue);
-					});
-				}
-			},
-
-			_bindOvervablePropertyToInput: function ($element, property, propertyName) {
-				var callback = function (e) {
-					property.val($(this).val());
-				};
-
-				this[propertyName + '_ViewChanged'] = callback;
-
-				$element.change(callback);
-			},
-
-			_bindSimplePropertyToInput: function ($element, model, propertyName) {
-				var newProperty = propertyName + '_ViewChanged',
-					callback = function (e) {
-						model[propertyName] = $(e.target).val();
-					};
-
-				this[newProperty] = callback;
-
-				$element.change(callback);
-			},
-
-			_tryBindInputToModel: function ($element, model) {
-				var id = $element.attr('id');
-				var property = model[id];
-
-				if (property != undefined) {
-					if (property instanceof Observable) {
-						this._bindOvervablePropertyToInput($element, property, id);
-						return true;
-					} else if (typeof property != "function") {
-						this._bindSimplePropertyToInput($element, model, id);
-						return true;
-					}
-				}
-
-				return false;
-			},
-
-			_tryBindClickableToViewHandler: function ($element) {
-				var scope = this,
-					id = $element.attr('id'),
-					newProperty = id + '_Clicked',
-					callback;
-
-				if (scope[newProperty] != undefined) {
-					$element.click(function (e) {
-						if (e.preventDefault != undefined) {
-							e.preventDefault();
-						}
-
-						scope[newProperty](e);
-					});
-
-					return true;
-				}
-
-				return false;
-			},
-
-			_tryBindInputToViewHandler: function ($element) {
-				var scope = this,
-					id = $element.attr('id'),
-					newProperty = id + '_ViewChanged',
-					callback;
-
-				if (scope[newProperty] != undefined) {
-					$element.change(function (e) {
-						scope[newProperty](e);
-					});
-
-					return true;
-				}
-
-				return false;
-			},
-
-			_bindContent: function ($element, property, propertyName) {
-				var callback = function (newValue) {
-					$element.html(newValue);
-				};
-
-				this[propertyName + '_ModelChanged'] = callback;
-
-				property.subscribe(callback);
-			},
-
-			_tryBindClick: function (propertyName, callback) {
-				$element = this._findViewElement(propertyName);
-
-				if ($element && this._isClickable($element)) {
-					this._bindClick($element, propertyName, callback);
-					return true;
-				}
-
-				return false;
-			},
-
-			_isClickable: function ($element) {
-				return $element.is(this._clickableSelector);
-			},
-
-			_isInput: function ($element) {
-				return $element.is(this._inputSelector);
-			},
-
-			_bindClick: function ($element, propertyName, callback) {
-				var handler = function () {
-					callback();
-				};
-
-				this[propertyName + 'Clicked'] = handler;
-
-				$element.click(handler);
-			},
-
-			_select: function (selector) {
-				if (this._$documentScope) {
-					return this._$documentScope.filter(selector);
-				} else {
-					return $(selector);
-				}
-			},
-
-			_findViewElement: function (id) {
-				return this._select('#' + id);
-			}
-		};
-
+		});
+		
 		return construct;
+	})();
+	
+	Bind = (function () {
+		var bind = function (params) {
+			var view = params.view || {},
+				model = params.model || {},
+				bindingState = {
+					boundModelProperties: [],
+					boundViewElements: []
+				};
+				
+			_(bind.pipeline).forEach(function (step) {
+				step.tryBind(view, model, bindingState);
+			});
+		};
+		
+		bind.pipeline = [
+			new BindModelToViewHandlersStep(),
+			new BindModelToHtmlStep(),
+			new BindInputsToViewHandlersStep(),
+			new BindInputsToModelStep(),
+			new BindClickablesToViewHandlersStep(),
+			new BindModelDirectlyStep()
+		]
+		
+		return bind;
 	})();
 	
 	return {
@@ -746,9 +517,7 @@ solder = (function(undefined) {
 		Observable: Observable,
 		SmartEvent: SmartEvent,
 		View: View,
-		Bind: {
-			PipelineStep: BindPipelineStep,
-			Pipeline: BindPipeline
-		}
+		Bind: Bind,
+		BindPipelineStep: BindPipelineStep
 	};
-})();
+})(jQuery);

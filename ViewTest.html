@@ -277,7 +277,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new solder.View({ model: model });
+				solder.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -294,7 +294,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new solder.View({ model: model });
+				solder.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -311,7 +311,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new solder.View({ model: model });
+				solder.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -328,7 +328,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new solder.View({ model: model });
+				solder.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -345,7 +345,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new solder.View({ model: model });
+				solder.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -363,7 +363,7 @@
 			var propertyName = 'iDoNotExist';
 
 			givenModelWithFunctionProperty(propertyName, function () { }, function (model) {
-				var subject = new solder.View({ model: model });
+				solder.Bind({ model: model });
 
 				// Assert
 				ok(true);
@@ -398,7 +398,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenTagWithIdContainsText(propertyName, oldContent, function () {
-					var subject = new solder.View({ model: model });
+					solder.Bind({ model: model });
 
 					// Act
 					model[propertyName].val(newContent);
@@ -421,7 +421,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
-					var subject = new solder.View({ model: model });
+					solder.Bind({ model: model });
 					$('#' + propertyName).val(newValue);
 
 					// Act
@@ -443,7 +443,7 @@
 				newContent = 'Something super special and important.';
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
-				var subject = new solder.View({ model: model });
+				solder.Bind({ model: model });
 
 				// Act
 				model[propertyName].val(newContent);
@@ -466,9 +466,11 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
-					var subject = new solder.View({
+					solder.Bind({
 						model: model,
-						$documentScope: $('#subView')
+						view: {
+							$documentScope: $('#subView')
+						}
 					});
 
 					$('#' + propertyName).val(newValue);
@@ -482,36 +484,19 @@
 			});
 		});
 
-		test('Given an extension source object with a property / Constructor yields view with that property', function () {
-			// Arrange
-			var called = false,
-				subject = new solder.View({
-					model: {},
-					extend: {
-						doSomething: function () { called = true; }
-					}
-				});
-
-			// Act
-			subject.doSomething();
-
-			// Assert
-			ok(called);
-		});
-
-		test('Given an extension source object with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
+		test('Given an view with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
 			// Arrange
 			var called = false,
 				extendSource,
 				subject,
 				propertyName = 'dynamicInput';
 
-			extendSource = {};
-			extendSource[propertyName + '_ViewChanged'] = function () { called = true; };
+			view = {};
+			view[propertyName + '_ViewChanged'] = function () { called = true; };
 
-			subject = new solder.View({
+			solder.Bind({
 				model: {},
-				extend: extendSource
+				view: view
 			});
 
 			// Act
@@ -521,19 +506,19 @@
 			ok(called);
 		});
 
-		test('Given an extension source object with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Clicking the button calls the property from the extension source.', function () {
+		test('Given an view with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Clicking the button calls the property from the extension source.', function () {
 			// Arrange
 			var called = false,
 				extendSource,
 				subject,
-				propertyName = 'helloButton';
+				propertyName = 'helloInputButton';
 
-			extendSource = {};
-			extendSource[propertyName + '_Clicked'] = function () { called = true; };
+			view = {};
+			view[propertyName + '_Clicked'] = function () { called = true; };
 
-			subject = new solder.View({
+			solder.Bind({
 				model: {},
-				extend: extendSource
+				view: view
 			});
 
 			// Act
