@@ -1,3 +1,9 @@
+/*
+    copper.js
+    Author: Chris Ammerman
+    License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
+    Version 0.1.0
+*/
 solder = (function($, undefined) {
 	var Observable,
 		SmartEvent,
