@@ -36,7 +36,7 @@
 				subject;
 
 			// Act
-			subject = new solder.Observable(value);
+			subject = new copper.Observable(value);
 
 			// Assert
 			equal(subject.val(), value);
@@ -45,7 +45,7 @@
 		test('Given initial value, when new value set, accessor yields new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new solder.Observable('SomethingSomething');
+				subject = new copper.Observable('SomethingSomething');
 
 			// Act
 			subject.val(replacementValue);
@@ -57,7 +57,7 @@
 		test('Given subscription, when new value set, handler called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new solder.Observable('SomethingSomething'),
+				subject = new copper.Observable('SomethingSomething'),
 				storedByHandler = undefined;
 
 			subject.subscribe(function (newValue) {
@@ -74,7 +74,7 @@
 		test('Given multiple subscriptions, when new value set, handlers all called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new solder.Observable('SomethingSomething'),
+				subject = new copper.Observable('SomethingSomething'),
 				storedByHandlers = [],
 				handlerCount = 7;
 
@@ -95,7 +95,7 @@
 		test('Given multiple subscriptions, and given a handler is unsubscribed, when new value set, handlers all called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new solder.Observable('SomethingSomething'),
+				subject = new copper.Observable('SomethingSomething'),
 				handler1Called = false,
 				handler1 = function () { handler1Called = true },
 				handler2Called = false,
@@ -115,7 +115,7 @@
 		test('Given multiple subscriptions, and given release was called, when new value set, handlers all called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new solder.Observable('SomethingSomething'),
+				subject = new copper.Observable('SomethingSomething'),
 				handler1Called = false,
 				handler1 = function () { handler1Called = true },
 				handler2Called = false,
@@ -123,6 +123,121 @@
 
 			subject.subscribe(handler1);
 			subject.subscribe(handler2);
+
+			// Act
+			subject.release();
+			subject.val(replacementValue);
+
+			// Assert
+			ok(!handler1Called && !handler2Called);
+		});
+		
+		module("ObservableCollection");
+
+		test('Given no initial value, when constructed, accessor yields empty array.', function () {
+			// Arrange
+			var subject;
+
+			// Act
+			subject = new copper.ObservableCollection();
+
+			// Assert
+			deepEqual(subject.val(), []);
+		});
+
+		test('Given initial value, when constructed, accessor yields initial value.', function () {
+			// Arrange
+			var value = [1, 2, 3],
+				subject;
+
+			// Act
+			subject = new copper.ObservableCollection(value);
+
+			// Assert
+			equal(subject.val(), value);
+		});
+
+		test('Given initial value, when new value set, accessor yields new value.', function () {
+			// Arrange
+			var replacementValue = ['SomethingNew'],
+				subject = new copper.ObservableCollection(['SomethingSomething']);
+
+			// Act
+			subject.val(replacementValue);
+
+			// Assert
+			equal(subject.val(), replacementValue);
+		});
+
+		test('Given subscription, when new value set, handler called with new value.', function () {
+			// Arrange
+			var replacementValue = ['SomethingNew'],
+				subject = new copper.ObservableCollection(['SomethingSomething']),
+				storedByHandler = undefined;
+
+			subject.subscribe('collectionReplaced', function (newValue) {
+				storedByHandler = newValue;
+			});
+
+			// Act
+			subject.val(replacementValue);
+
+			// Assert
+			equal(storedByHandler, replacementValue);
+		});
+
+		test('Given multiple subscriptions, when new value set, handlers all called with new value.', function () {
+			// Arrange
+			var replacementValue = ['SomethingNew'],
+				subject = new copper.ObservableCollection(['SomethingSomething']),
+				storedByHandlers = [],
+				handlerCount = 7;
+
+			_.range(0, handlerCount).forEach(function () {
+				subject.subscribe('collectionReplaced', function (newValue) {
+					storedByHandlers.push(newValue);
+				});
+			});
+
+			// Act
+			subject.val(replacementValue);
+
+			// Assert
+			ok(storedByHandlers.length == handlerCount
+				&& _(storedByHandlers).without(replacementValue).length == 0);
+		});
+
+		test('Given multiple subscriptions, and given a handler is unsubscribed, when new value set, handlers all called with new value.', function () {
+			// Arrange
+			var replacementValue = ['SomethingNew'],
+				subject = new copper.ObservableCollection(['SomethingSomething']),
+				handler1Called = false,
+				handler1 = function () { handler1Called = true },
+				handler2Called = false,
+				handler2 = function () { handler2Called = true }
+
+			subject.subscribe('collectionReplaced', handler1);
+			subject.subscribe('collectionReplaced', handler2);
+
+			// Act
+			subject.unsubscribe('collectionReplaced', handler1);
+			subject.val(replacementValue);
+
+			// Assert
+			ok(handler2Called && !handler1Called);
+		});
+
+		test('Given multiple subscriptions, and given release was called, when new value set, handlers all called with new value.', function () {
+			// Arrange
+			var replacementValue = ['SomethingNew'],
+				subject = new copper.ObservableCollection(['SomethingSomething']),
+				handler1Called = false,
+				handler1 = function () { handler1Called = true },
+				handler2Called = false,
+				handler2 = function () { handler2Called = true }
+
+			subject.subscribe('collectionReplaced', handler1);
+			subject.subscribe('collectionReplaced', handler2);
 
 			// Act
 			subject.release();
@@ -140,7 +255,7 @@
 				subject;
 
 			// Act
-			subject = new solder.SmartEvent(name);
+			subject = new copper.SmartEvent(name);
 
 			// Assert
 			equal(subject.name, name);
@@ -151,7 +266,7 @@
 			var subject;
 
 			// Act
-			subject = new solder.SmartEvent();
+			subject = new copper.SmartEvent();
 
 			// Assert
 			deepEqual(subject.handlers, []);
@@ -159,7 +274,7 @@
 
 		test('subscribe / Given function / Adds handler to handlers list', function () {
 			// Arrange
-			var subject = new solder.SmartEvent(),
+			var subject = new copper.SmartEvent(),
 				handler = function () { };
 
 			// Act
@@ -171,7 +286,7 @@
 
 		test('subscribe / Given function already added / Does not add handler again', function () {
 			// Arrange
-			var subject = new solder.SmartEvent(),
+			var subject = new copper.SmartEvent(),
 				handler1 = function () { },
 				handler2 = function () { };
 
@@ -187,7 +302,7 @@
 
 		test('subscribe / Given a non-function value / Does nothing', function () {
 			// Arrange
-			var subject = new solder.SmartEvent();
+			var subject = new copper.SmartEvent();
 
 			// Act
 			subject.subscribe({ something: 'not a function' });
@@ -198,7 +313,7 @@
 
 		test('unsubscribe / Given a function already added / Removes handler', function () {
 			// Arrange
-			var subject = new solder.SmartEvent(),
+			var subject = new copper.SmartEvent(),
 				handler1 = function () { },
 				handler2 = function () { };
 
@@ -214,7 +329,7 @@
 
 		test('unsubscribe / Given a function not yet added / Does nothing', function () {
 			// Arrange
-			var subject = new solder.SmartEvent(),
+			var subject = new copper.SmartEvent(),
 				handler1 = function () { },
 				handler2 = function () { };
 
@@ -229,7 +344,7 @@
 
 		test('unsubscribe / Given a non-function value / Does nothing', function () {
 			// Arrange
-			var subject = new solder.SmartEvent(),
+			var subject = new copper.SmartEvent(),
 				handler = function () { };
 
 			subject.subscribe(handler);
@@ -243,7 +358,7 @@
 
 		test('raise / Calls each subscribed function', function () {
 			// Arrange
-			var subject = new solder.SmartEvent(),
+			var subject = new copper.SmartEvent(),
 				handler1Called = false,
 				handler1 = function () { handler1Called = true },
 				handler2Called = false,
@@ -277,7 +392,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				solder.Bind({ model: model });
+				copper.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -294,7 +409,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				solder.Bind({ model: model });
+				copper.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -311,7 +426,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				solder.Bind({ model: model });
+				copper.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -328,7 +443,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				solder.Bind({ model: model });
+				copper.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -345,7 +460,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				solder.Bind({ model: model });
+				copper.Bind({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -363,7 +478,7 @@
 			var propertyName = 'iDoNotExist';
 
 			givenModelWithFunctionProperty(propertyName, function () { }, function (model) {
-				solder.Bind({ model: model });
+				copper.Bind({ model: model });
 
 				// Assert
 				ok(true);
@@ -372,7 +487,7 @@
 
 		var givenModelWithObservableProperty = function (propertyName, initialValue, continueTest) {
 			var model = {};
-			model[propertyName] = new solder.Observable(initialValue);
+			model[propertyName] = new copper.Observable(initialValue);
 			continueTest(model);
 		};
 
@@ -398,7 +513,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenTagWithIdContainsText(propertyName, oldContent, function () {
-					solder.Bind({ model: model });
+					copper.Bind({ model: model });
 
 					// Act
 					model[propertyName].val(newContent);
@@ -421,7 +536,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
-					solder.Bind({ model: model });
+					copper.Bind({ model: model });
 					$('#' + propertyName).val(newValue);
 
 					// Act
@@ -443,7 +558,7 @@
 				newContent = 'Something super special and important.';
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
-				solder.Bind({ model: model });
+				copper.Bind({ model: model });
 
 				// Act
 				model[propertyName].val(newContent);
@@ -466,7 +581,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
-					solder.Bind({
+					copper.Bind({
 						model: model,
 						view: {
 							$documentScope: $('#subView')
@@ -494,7 +609,7 @@
 			view = {};
 			view[propertyName + '_ViewChanged'] = function () { called = true; };
 
-			solder.Bind({
+			copper.Bind({
 				model: {},
 				view: view
 			});
@@ -516,7 +631,7 @@
 			view = {};
 			view[propertyName + '_Clicked'] = function () { called = true; };
 
-			solder.Bind({
+			copper.Bind({
 				model: {},
 				view: view
 			});

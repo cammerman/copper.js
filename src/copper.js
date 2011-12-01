@@ -4,8 +4,10 @@
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
     Version 0.1.0
 */
-solder = (function($, undefined) {
+copper = (function($, undefined) {
 	var Observable,
+		ObservableCollection,
+		EventHost,
 		SmartEvent,
 		View,
 		BindPipelineStep,
@@ -28,8 +30,146 @@ solder = (function($, undefined) {
 					target[prop] = source[prop];
 				}
 			}
+		},
+		inherit: function (target, source) {
+			for (var prop in source) {
+				if (typeof source[prop] == 'function' && target[prop] == undefined) {
+					target[prop] = source[prop];
+				}
+			}
+
+			return target;
 		}
 	};
+
+	SmartEvent = (function () {
+		var construct;
+
+		construct = function (name) {
+			this.name = name;
+			this.handlers = [];
+		};
+
+		construct.prototype = {
+			subscribe: function (handler) {
+				if (typeof handler === 'function' && !_(this.handlers).include(handler)) {
+					this.handlers.push(handler);
+				}
+			},
+			unsubscribe: function (handler) {
+				if (typeof handler === 'function') {
+					this.handlers = _(this.handlers).without(handler);
+				}
+			},
+			raise: function () {
+				var args = Array.prototype.slice.call(arguments);
+
+				_(this.handlers).each(function (handler) {
+					handler.apply(handler, args);
+				});
+			},
+			release: function () {
+				this.handlers = [];
+			}
+		};
+
+		return construct;
+	})();
+
+	EventHost = (function () {
+		construct = function (eventNames) {
+			var scope = this;
+
+			scope._events = {};
+			scope._buffer = false;
+			scope._bufferedEvents = [];
+
+			_(eventNames || []).forEach(function (eventName) {
+				scope._events[eventName] = new SmartEvent(eventName);
+			});
+		};
+
+		construct.prototype = {
+			_subscribe: function (eventName, handler) {
+				var theEvent = this._events[eventName];
+
+				if (theEvent instanceof SmartEvent) {
+					theEvent.subscribe(handler);
+				}
+			},
+			_bulkSubscribe: function (handlers) {
+				var eventName;
+
+				for (eventName in handlers) {
+					this._subscribe(eventName, handlers[eventName]);
+				}
+			},
+			subscribe: function () {
+				if (arguments.length == 0) {
+					return;
+				}
+
+				if (typeof arguments[0] == 'string') {
+					this._subscribe.apply(this, arguments);
+				} else if (typeof arguments[0] == 'object') {
+					this._bulkSubscribe.apply(this, arguments);
+				}
+			},
+			unsubscribe: function (eventName, handler) {
+				var theEvent = this._events[eventName];
+
+				if (theEvent instanceof SmartEvent) {
+					theEvent.unsubscribe(handler);
+				}
+			},
+			raise: function () {
+				var scope = this,
+					args = Array.prototype.slice.call(arguments);
+
+				if (args.length == 0) {
+					return;
+				}
+
+				var theEvent = scope._events[args[0]];
+
+				if (theEvent instanceof SmartEvent) {
+					var doRaise = function () {
+						theEvent.raise.apply(theEvent, args.slice(1));
+					};
+
+					if (scope._buffer) {
+						scope._bufferedEvents.push(doRaise);
+					} else {
+						doRaise();
+					}
+				}
+			},
+			bufferEvents: function () {
+				this._buffer = true;
+			},
+			discardBuffer: function () {
+				this._bufferedEvents = [];
+			},
+			flushBuffer: function () {
+				_(this._bufferedEvents).forEach(function (doRaise) {
+					doRaise();
+				});
+			},
+			release: function () {
+				var eventName;
+
+				if (arguments.length == 0) {
+					this.discardBuffer();
+
+					for (eventName in this._events) {
+						this._events[eventName].release();
+					}
+				}
+			}
+		};
+
+		return construct;
+	})();
 
 	Observable = (function () {
 		construct = function (newValue) {
@@ -72,31 +212,53 @@ solder = (function($, undefined) {
 		return construct;
 	})();
 
-	SmartEvent = (function () {
-		var construct;
+	ObservableCollection = (function () {
+		construct = function (initialValue) {
+			EventHost.call(this, ['collectionReplaced', 'itemAdded', 'itemRemoved']);
 
-		construct = function (name) {
-			this.name = name;
-			this.handlers = [];
-		};
-
-		construct.prototype = {
-			subscribe: function (handler) {
-				if (typeof handler === 'function' && !_(this.handlers).include(handler)) {
-					this.handlers.push(handler);
-				}
-			},
-			unsubscribe: function (handler) {
-				if (typeof handler === 'function') {
-					this.handlers = _(this.handlers).without(handler);
-				}
-			},
-			raise: function () {
-				_(this.handlers).each(function (handler) {
-					handler();
-				});
+			if (initialValue instanceof Array) {
+				this._value = initialValue;
+			} else {
+				this._value = [];
 			}
 		};
+
+		construct.prototype = Extender.inherit(new EventHost(), {
+			val: function (newValue) {
+				if (newValue === undefined) {
+					return this._value;
+				} else {
+					if (!(newValue instanceof Array)) {
+						return;
+					}
+
+					if (this._value != newValue) {
+						this._value = newValue;
+						this.raise('collectionReplaced', newValue);
+					}
+				}
+			},
+			add: function (newItem, index) {
+				this._value.splice(index, 0, newItem);
+				this.raise('itemAdded', newItem, index);
+			},
+			remove: function (item) {
+				var index = this._value.indexof(item);
+				if (index != -1) {
+					this.removeAt(index);
+				}
+			},
+			removeAt: function (index) {
+				var sliced = this._value.slice(index + 1),
+					item = sliced[0];
+
+				this._value.length = index - 1;
+				// Calls Array.push with the items after the removed item as the argument array.
+				this._value.push.apply(this._value, sliced);
+
+				this.raise('itemRemoved', item, index);
+			}
+		});
 
 		return construct;
 	})();
