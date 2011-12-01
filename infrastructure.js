@@ -1,21 +1,29 @@
-(function(undefined) {
-	Object.extend = function (target, source, preserveExisting) {
-		for (var prop in source) {
-			if (source.hasOwnProperty(prop)
-				&& (!preserveExisting
-					|| target[prop] == undefined)) {
-				target[prop] = source[prop];
+solder = (function(undefined) {
+	var Observable,
+		SmartEvent,
+		View,
+		BindPipelineStep,
+		BindPipeline,
+		Extender;
+		
+	Extender = {
+		extend: function (target, source, preserveExisting) {
+			for (var prop in source) {
+				if (source.hasOwnProperty(prop)
+					&& (!preserveExisting
+						|| target[prop] == undefined)) {
+					target[prop] = source[prop];
+				}
+			}
+		},
+		extendDeep: function (target, source, preserveExisting) {
+			for (var prop in source) {
+				if (!preserveExisting || target[prop] == undefined) {
+					target[prop] = source[prop];
+				}
 			}
 		}
-	}
-
-	Object.extendDeep = function (target, source, preserveExisting) {
-		for (var prop in source) {
-			if (!preserveExisting || target[prop] == undefined) {
-				target[prop] = source[prop];
-			}
-		}
-	}
+	};
 
 	Observable = (function () {
 		construct = function (newValue) {
@@ -113,7 +121,7 @@
 
 	BindPipelineStep = (function () {
 		var construct = function (strategy) {
-			Object.extend(this, strategy);
+			Extender.extend(this, strategy);
 			this._inputSelector = 'select, input[type!=button], input[type!=reset], input[type!=file]';
 			this._clickableSelector = 'a, button, input[type=submit], input[type=button], input[type=reset]';
 		};
@@ -144,7 +152,7 @@
 	
 	BindModelPropertyStep = (function () {
 		var construct = function (strategy) {
-			Object.extend(this, strategy);
+			Extender.extend(this, strategy);
 		};
 		
 		construct.prototype = new BindPipelineStep({
@@ -265,7 +273,7 @@
 		});
 		
 		return construct;
-	
+	})();
 	
 	BindModelToViewHandlersStep = (function () {
 		var construct = function () { };
@@ -304,7 +312,7 @@
 	
 	BindHtmlElementStep = (function () {
 		var construct = function (strategy) {
-			Object.extend(this, strategy);
+			Extender.extend(this, strategy);
 		};
 		
 		construct.prototype = new BindPipelineStep({
@@ -318,7 +326,7 @@
 				throw new BindPipelineStepException({
 					message: 'Model property binding step is not implemented.',
 					subject: view._$documentScope,
-					member: member || this._selector;
+					member: member || this._selector
 				});
 			},
 			
@@ -332,7 +340,7 @@
 
 			_findViewElement: function (id) {
 				return this._select('#' + id);
-			}
+			},
 			
 			tryBind: function(view, model, state) {
 				var scope = this,
@@ -465,24 +473,20 @@
 		return construct;
 	})();
 		
-	Bind = (function () {
-		var pipeline = [
-			new BindModelToViewHandlersStep(),
-			new BindModelToHtmlStep(),
-			new BindInputsToViewHandlersStep(),
-			new BindInputsToModelStep(),
-			new BindClickablesToViewHandlersStep()
-		];
-		
-		return null;
-	})();
+	BindPipeline = [
+		new BindModelToViewHandlersStep(),
+		new BindModelToHtmlStep(),
+		new BindInputsToViewHandlersStep(),
+		new BindInputsToModelStep(),
+		new BindClickablesToViewHandlersStep()
+	];
 
 	View = (function () {
 		construct = function (init) {
 			this._inputSelector = 'select, input[type!=button], input[type!=reset], input[type!=file]';
 			this._clickableSelector = 'a, button, input[type=submit], input[type=button], input[type=reset]';
 
-			Object.extendDeep(this, init.extend, true);
+			Extender.extendDeep(this, init.extend, true);
 			if (init.extend
 				&& init.extend._bindModel
 				&& typeof init.extend._bindModel == 'function') {
@@ -736,4 +740,15 @@
 
 		return construct;
 	})();
+	
+	return {
+		Extender: Extender,
+		Observable: Observable,
+		SmartEvent: SmartEvent,
+		View: View,
+		Bind: {
+			PipelineStep: BindPipelineStep,
+			Pipeline: BindPipeline
+		}
+	};
 })();

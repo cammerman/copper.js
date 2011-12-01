@@ -36,7 +36,7 @@
 				subject;
 
 			// Act
-			subject = new Observable(value);
+			subject = new solder.Observable(value);
 
 			// Assert
 			equal(subject.val(), value);
@@ -45,7 +45,7 @@
 		test('Given initial value, when new value set, accessor yields new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new Observable('SomethingSomething');
+				subject = new solder.Observable('SomethingSomething');
 
 			// Act
 			subject.val(replacementValue);
@@ -57,7 +57,7 @@
 		test('Given subscription, when new value set, handler called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new Observable('SomethingSomething'),
+				subject = new solder.Observable('SomethingSomething'),
 				storedByHandler = undefined;
 
 			subject.subscribe(function (newValue) {
@@ -74,7 +74,7 @@
 		test('Given multiple subscriptions, when new value set, handlers all called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new Observable('SomethingSomething'),
+				subject = new solder.Observable('SomethingSomething'),
 				storedByHandlers = [],
 				handlerCount = 7;
 
@@ -95,7 +95,7 @@
 		test('Given multiple subscriptions, and given a handler is unsubscribed, when new value set, handlers all called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new Observable('SomethingSomething'),
+				subject = new solder.Observable('SomethingSomething'),
 				handler1Called = false,
 				handler1 = function () { handler1Called = true },
 				handler2Called = false,
@@ -115,7 +115,7 @@
 		test('Given multiple subscriptions, and given release was called, when new value set, handlers all called with new value.', function () {
 			// Arrange
 			var replacementValue = 'SomethingNew',
-				subject = new Observable('SomethingSomething'),
+				subject = new solder.Observable('SomethingSomething'),
 				handler1Called = false,
 				handler1 = function () { handler1Called = true },
 				handler2Called = false,
@@ -140,7 +140,7 @@
 				subject;
 
 			// Act
-			subject = new SmartEvent(name);
+			subject = new solder.SmartEvent(name);
 
 			// Assert
 			equal(subject.name, name);
@@ -151,7 +151,7 @@
 			var subject;
 
 			// Act
-			subject = new SmartEvent();
+			subject = new solder.SmartEvent();
 
 			// Assert
 			deepEqual(subject.handlers, []);
@@ -159,7 +159,7 @@
 
 		test('subscribe / Given function / Adds handler to handlers list', function () {
 			// Arrange
-			var subject = new SmartEvent(),
+			var subject = new solder.SmartEvent(),
 				handler = function () { };
 
 			// Act
@@ -171,7 +171,7 @@
 
 		test('subscribe / Given function already added / Does not add handler again', function () {
 			// Arrange
-			var subject = new SmartEvent(),
+			var subject = new solder.SmartEvent(),
 				handler1 = function () { },
 				handler2 = function () { };
 
@@ -187,7 +187,7 @@
 
 		test('subscribe / Given a non-function value / Does nothing', function () {
 			// Arrange
-			var subject = new SmartEvent();
+			var subject = new solder.SmartEvent();
 
 			// Act
 			subject.subscribe({ something: 'not a function' });
@@ -198,7 +198,7 @@
 
 		test('unsubscribe / Given a function already added / Removes handler', function () {
 			// Arrange
-			var subject = new SmartEvent(),
+			var subject = new solder.SmartEvent(),
 				handler1 = function () { },
 				handler2 = function () { };
 
@@ -214,7 +214,7 @@
 
 		test('unsubscribe / Given a function not yet added / Does nothing', function () {
 			// Arrange
-			var subject = new SmartEvent(),
+			var subject = new solder.SmartEvent(),
 				handler1 = function () { },
 				handler2 = function () { };
 
@@ -229,7 +229,7 @@
 
 		test('unsubscribe / Given a non-function value / Does nothing', function () {
 			// Arrange
-			var subject = new SmartEvent(),
+			var subject = new solder.SmartEvent(),
 				handler = function () { };
 
 			subject.subscribe(handler);
@@ -243,7 +243,7 @@
 
 		test('raise / Calls each subscribed function', function () {
 			// Arrange
-			var subject = new SmartEvent(),
+			var subject = new solder.SmartEvent(),
 				handler1Called = false,
 				handler1 = function () { handler1Called = true },
 				handler2Called = false,
@@ -277,7 +277,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new View({ model: model });
+				var subject = new solder.View({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -294,7 +294,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new View({ model: model });
+				var subject = new solder.View({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -311,7 +311,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new View({ model: model });
+				var subject = new solder.View({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -328,7 +328,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new View({ model: model });
+				var subject = new solder.View({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -345,7 +345,7 @@
 				propertyFunction = function () { called = true; };
 
 			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
-				var subject = new View({ model: model });
+				var subject = new solder.View({ model: model });
 
 				// Act
 				$('#' + propertyName).click();
@@ -363,7 +363,7 @@
 			var propertyName = 'iDoNotExist';
 
 			givenModelWithFunctionProperty(propertyName, function () { }, function (model) {
-				var subject = new View({ model: model });
+				var subject = new solder.View({ model: model });
 
 				// Assert
 				ok(true);
@@ -372,7 +372,7 @@
 
 		var givenModelWithObservableProperty = function (propertyName, initialValue, continueTest) {
 			var model = {};
-			model[propertyName] = new Observable(initialValue);
+			model[propertyName] = new solder.Observable(initialValue);
 			continueTest(model);
 		};
 
@@ -398,7 +398,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenTagWithIdContainsText(propertyName, oldContent, function () {
-					var subject = new View({ model: model });
+					var subject = new solder.View({ model: model });
 
 					// Act
 					model[propertyName].val(newContent);
@@ -421,7 +421,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
-					var subject = new View({ model: model });
+					var subject = new solder.View({ model: model });
 					$('#' + propertyName).val(newValue);
 
 					// Act
@@ -443,7 +443,7 @@
 				newContent = 'Something super special and important.';
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
-				var subject = new View({ model: model });
+				var subject = new solder.View({ model: model });
 
 				// Act
 				model[propertyName].val(newContent);
@@ -466,7 +466,7 @@
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
-					var subject = new View({
+					var subject = new solder.View({
 						model: model,
 						$documentScope: $('#subView')
 					});
@@ -485,7 +485,7 @@
 		test('Given an extension source object with a property / Constructor yields view with that property', function () {
 			// Arrange
 			var called = false,
-				subject = new View({
+				subject = new solder.View({
 					model: {},
 					extend: {
 						doSomething: function () { called = true; }
@@ -509,7 +509,7 @@
 			extendSource = {};
 			extendSource[propertyName + '_ViewChanged'] = function () { called = true; };
 
-			subject = new View({
+			subject = new solder.View({
 				model: {},
 				extend: extendSource
 			});
@@ -531,7 +531,7 @@
 			extendSource = {};
 			extendSource[propertyName + '_Clicked'] = function () { called = true; };
 
-			subject = new View({
+			subject = new solder.View({
 				model: {},
 				extend: extendSource
 			});
