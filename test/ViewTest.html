@@ -157,10 +157,10 @@
 			equal(subject.val(), value);
 		});
 
-		test('Given initial value, when new value set, accessor yields new value.', function () {
+		test('Given initial value, when new collection replaced, accessor yields new value.', function () {
 			// Arrange
-			var replacementValue = ['SomethingNew'],
-				subject = new copper.ObservableCollection(['SomethingSomething']);
+			var replacementValue = ['SomethingNew', 'Something 2', 'Something 3'],
+				subject = new copper.ObservableCollection(['SomethingSomething', 'Wonderwall', 'Splendor']);
 
 			// Act
 			subject.val(replacementValue);
@@ -171,8 +171,8 @@
 
 		test('Given subscription, when new value set, handler called with new value.', function () {
 			// Arrange
-			var replacementValue = ['SomethingNew'],
-				subject = new copper.ObservableCollection(['SomethingSomething']),
+			var replacementValue = ['SomethingNew', 'Something 2', 'Something 3'],
+				subject = new copper.ObservableCollection(['SomethingSomething', 'Wonderwall', 'Splendor']),
 				storedByHandler = undefined;
 
 			subject.subscribe('collectionReplaced', function (newValue) {
@@ -185,66 +185,137 @@
 			// Assert
 			equal(storedByHandler, replacementValue);
 		});
-
-		test('Given multiple subscriptions, when new value set, handlers all called with new value.', function () {
+		
+		test('Given existing collection, when value added, accessor yields array with value added to end.', function () {
 			// Arrange
-			var replacementValue = ['SomethingNew'],
-				subject = new copper.ObservableCollection(['SomethingSomething']),
-				storedByHandlers = [],
-				handlerCount = 7;
+			var initialValue = ['A', 'B', 'D', 'E'],
+				subject = new copper.ObservableCollection(initialValue),
+				valueToAdd = 'C',
+				expectedValue;
 
-			_.range(0, handlerCount).forEach(function () {
-				subject.subscribe('collectionReplaced', function (newValue) {
-					storedByHandlers.push(newValue);
-				});
+			expectedValue = initialValue.slice(0);
+			expectedValue.push(valueToAdd);
+				
+			// Act
+			subject.add(valueToAdd);
+
+			// Assert
+			deepEqual(initialValue, expectedValue);
+		});
+		
+		test('Given existing collection, when value added at index, accessor yields array with added value.', function () {
+			// Arrange
+			var initialValue = ['A', 'B', 'D', 'E'],
+				subject = new copper.ObservableCollection(initialValue),
+				valueToAdd = 'C',
+				indexToAdd = 2,
+				expectedValue;
+
+			expectedValue = initialValue.slice(0);
+			expectedValue.splice(indexToAdd, 0, valueToAdd);
+				
+			// Act
+			subject.add(valueToAdd, indexToAdd);
+
+			// Assert
+			deepEqual(initialValue, expectedValue);
+		});
+
+		test('Given subscription, when value added, handler called with new value and index.', function () {
+			// Arrange
+			var subject = new copper.ObservableCollection(['A', 'B', 'D', 'E']),
+				valueToAdd = 'C',
+				indexToAdd = '2',
+				valueAdded,
+				addedIndex;
+
+			subject.subscribe('itemAdded', function (item, index) {
+				valueAdded = item;
+				addedIndex = index;
 			});
 
 			// Act
-			subject.val(replacementValue);
+			subject.add(valueToAdd, indexToAdd);
 
 			// Assert
-			ok(storedByHandlers.length == handlerCount
-				&& _(storedByHandlers).without(replacementValue).length == 0);
+			equal(valueAdded, valueToAdd);
+			equal(addedIndex, indexToAdd);
+		});
+		
+		test('Given existing collection, when value removed, accessor yields array with value removed.', function () {
+			// Arrange
+			var initialValue = ['A', 'C', 'B', 'E', 'D'],
+				subject = new copper.ObservableCollection(initialValue),
+				valueToRemove = 'C',
+				expectedValue = initialValue;
+				
+			expectedValue.splice(expectedValue.indexOf(valueToRemove), 1);
+				
+			// Act
+			subject.remove(valueToRemove);
+
+			// Assert
+			deepEqual(initialValue, expectedValue);
 		});
 
-		test('Given multiple subscriptions, and given a handler is unsubscribed, when new value set, handlers all called with new value.', function () {
+		test('Given subscription, when value removed, handler called with new value and index.', function () {
 			// Arrange
-			var replacementValue = ['SomethingNew'],
-				subject = new copper.ObservableCollection(['SomethingSomething']),
-				handler1Called = false,
-				handler1 = function () { handler1Called = true },
-				handler2Called = false,
-				handler2 = function () { handler2Called = true }
+			var initialValue = ['A', 'C', 'B', 'E', 'D'],
+				subject = new copper.ObservableCollection(initialValue),
+				valueToRemove = 'C',
+				indexToRemove = initialValue.indexOf(valueToRemove),
+				valueremoved,
+				removedIndex;
 
-			subject.subscribe('collectionReplaced', handler1);
-			subject.subscribe('collectionReplaced', handler2);
+			subject.subscribe('itemRemoved', function (item, index) {
+				valueremoved = item;
+				removedIndex = index;
+			});
 
 			// Act
-			subject.unsubscribe('collectionReplaced', handler1);
-			subject.val(replacementValue);
+			subject.remove(valueToRemove);
 
 			// Assert
-			ok(handler2Called && !handler1Called);
+			equal(valueremoved, valueToRemove);
+			equal(removedIndex, indexToRemove);
+		});
+		
+		test('Given existing collection, when value removed, accessor yields array with value removed.', function () {
+			// Arrange
+			var initialValue = ['A', 'C', 'B', 'E', 'D'],
+				subject = new copper.ObservableCollection(initialValue),
+				indexToRemove = 3;
+				expectedValue = initialValue;
+				
+			expectedValue.splice(indexToRemove, 1);
+				
+			// Act
+			subject.removeAt(indexToRemove);
+
+			// Assert
+			deepEqual(initialValue, expectedValue);
 		});
 
-		test('Given multiple subscriptions, and given release was called, when new value set, handlers all called with new value.', function () {
+		test('Given subscription, when value removed, handler called with new value and index.', function () {
 			// Arrange
-			var replacementValue = ['SomethingNew'],
-				subject = new copper.ObservableCollection(['SomethingSomething']),
-				handler1Called = false,
-				handler1 = function () { handler1Called = true },
-				handler2Called = false,
-				handler2 = function () { handler2Called = true }
+			var initialValue = ['A', 'C', 'B', 'E', 'D'],
+				subject = new copper.ObservableCollection(initialValue),
+				indexToRemove = 4,
+				valueToRemove = initialValue[indexToRemove],
+				valueRemoved,
+				removedIndex;
 
-			subject.subscribe('collectionReplaced', handler1);
-			subject.subscribe('collectionReplaced', handler2);
+			subject.subscribe('itemRemoved', function (item, index) {
+				valueRemoved = item;
+				removedIndex = index;
+			});
 
 			// Act
-			subject.release();
-			subject.val(replacementValue);
+			subject.removeAt(indexToRemove);
 
 			// Assert
-			ok(!handler1Called && !handler2Called);
+			equal(valueRemoved, valueToRemove);
+			equal(removedIndex, indexToRemove);
 		});
 		
 		module('SmartEvent');

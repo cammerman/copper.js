@@ -31,14 +31,21 @@ copper = (function($, undefined) {
 				}
 			}
 		},
-		inherit: function (target, source) {
-			for (var prop in source) {
-				if (typeof source[prop] == 'function' && target[prop] == undefined) {
-					target[prop] = source[prop];
+		extendPrototype: function (baseConstructor, extensions) {
+			var derived = new baseConstructor(),
+				prop;
+
+			for (prop in derived) {
+				if (typeof derived[prop] !== 'function') {
+					derived[prop] = undefined;
 				}
 			}
 
-			return target;
+			for (var prop in extensions) {
+				derived[prop] = extensions[prop];
+			}
+
+			return derived;
 		}
 	};
 
@@ -81,9 +88,7 @@ copper = (function($, undefined) {
 			var scope = this;
 
 			scope._events = {};
-			scope._buffer = false;
-			scope._bufferedEvents = [];
-
+			
 			_(eventNames || []).forEach(function (eventName) {
 				scope._events[eventName] = new SmartEvent(eventName);
 			});
@@ -133,34 +138,13 @@ copper = (function($, undefined) {
 				var theEvent = scope._events[args[0]];
 
 				if (theEvent instanceof SmartEvent) {
-					var doRaise = function () {
-						theEvent.raise.apply(theEvent, args.slice(1));
-					};
-
-					if (scope._buffer) {
-						scope._bufferedEvents.push(doRaise);
-					} else {
-						doRaise();
-					}
+					theEvent.raise.apply(theEvent, args.slice(1));
 				}
-			},
-			bufferEvents: function () {
-				this._buffer = true;
-			},
-			discardBuffer: function () {
-				this._bufferedEvents = [];
-			},
-			flushBuffer: function () {
-				_(this._bufferedEvents).forEach(function (doRaise) {
-					doRaise();
-				});
 			},
 			release: function () {
 				var eventName;
 
 				if (arguments.length == 0) {
-					this.discardBuffer();
-
 					for (eventName in this._events) {
 						this._events[eventName].release();
 					}
@@ -223,7 +207,7 @@ copper = (function($, undefined) {
 			}
 		};
 
-		construct.prototype = Extender.inherit(new EventHost(), {
+		construct.prototype = Extender.extendPrototype(EventHost, {
 			val: function (newValue) {
 				if (newValue === undefined) {
 					return this._value;
@@ -239,20 +223,24 @@ copper = (function($, undefined) {
 				}
 			},
 			add: function (newItem, index) {
-				this._value.splice(index, 0, newItem);
-				this.raise('itemAdded', newItem, index);
+				if (index == undefined) {
+					this._value.push(newItem);
+				} else {
+					this._value.splice(index, 0, newItem);
+					this.raise('itemAdded', newItem, index);
+				}
 			},
 			remove: function (item) {
-				var index = this._value.indexof(item);
+				var index = this._value.indexOf(item);
 				if (index != -1) {
 					this.removeAt(index);
 				}
 			},
 			removeAt: function (index) {
 				var sliced = this._value.slice(index + 1),
-					item = sliced[0];
+					item = this._value[index];
 
-				this._value.length = index - 1;
+				this._value.length = index;
 				// Calls Array.push with the items after the removed item as the argument array.
 				this._value.push.apply(this._value, sliced);
 
@@ -683,6 +671,7 @@ copper = (function($, undefined) {
 	return {
 		Extender: Extender,
 		Observable: Observable,
+		ObservableCollection: ObservableCollection,
 		SmartEvent: SmartEvent,
 		View: View,
 		Bind: Bind,
