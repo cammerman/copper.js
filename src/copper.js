@@ -2,12 +2,10 @@
     copper.js
     Author: Chris Ammerman
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
-    Version 0.1.0
+    Version 0.2.0
 */
-copper = (function($, undefined) {
+solder = (function($, undefined) {
 	var Observable,
-		ObservableCollection,
-		EventHost,
 		SmartEvent,
 		View,
 		BindPipelineStep,
@@ -30,130 +28,8 @@ copper = (function($, undefined) {
 					target[prop] = source[prop];
 				}
 			}
-		},
-		extendPrototype: function (baseConstructor, extensions) {
-			var derived = new baseConstructor(),
-				prop;
-
-			for (prop in derived) {
-				if (typeof derived[prop] !== 'function') {
-					derived[prop] = undefined;
-				}
-			}
-
-			for (var prop in extensions) {
-				derived[prop] = extensions[prop];
-			}
-
-			return derived;
 		}
 	};
-
-	SmartEvent = (function () {
-		var construct;
-
-		construct = function (name) {
-			this.name = name;
-			this.handlers = [];
-		};
-
-		construct.prototype = {
-			subscribe: function (handler) {
-				if (typeof handler === 'function' && !_(this.handlers).include(handler)) {
-					this.handlers.push(handler);
-				}
-			},
-			unsubscribe: function (handler) {
-				if (typeof handler === 'function') {
-					this.handlers = _(this.handlers).without(handler);
-				}
-			},
-			raise: function () {
-				var args = Array.prototype.slice.call(arguments);
-
-				_(this.handlers).each(function (handler) {
-					handler.apply(handler, args);
-				});
-			},
-			release: function () {
-				this.handlers = [];
-			}
-		};
-
-		return construct;
-	})();
-
-	EventHost = (function () {
-		construct = function (eventNames) {
-			var scope = this;
-
-			scope._events = {};
-			
-			_(eventNames || []).forEach(function (eventName) {
-				scope._events[eventName] = new SmartEvent(eventName);
-			});
-		};
-
-		construct.prototype = {
-			_subscribe: function (eventName, handler) {
-				var theEvent = this._events[eventName];
-
-				if (theEvent instanceof SmartEvent) {
-					theEvent.subscribe(handler);
-				}
-			},
-			_bulkSubscribe: function (handlers) {
-				var eventName;
-
-				for (eventName in handlers) {
-					this._subscribe(eventName, handlers[eventName]);
-				}
-			},
-			subscribe: function () {
-				if (arguments.length == 0) {
-					return;
-				}
-
-				if (typeof arguments[0] == 'string') {
-					this._subscribe.apply(this, arguments);
-				} else if (typeof arguments[0] == 'object') {
-					this._bulkSubscribe.apply(this, arguments);
-				}
-			},
-			unsubscribe: function (eventName, handler) {
-				var theEvent = this._events[eventName];
-
-				if (theEvent instanceof SmartEvent) {
-					theEvent.unsubscribe(handler);
-				}
-			},
-			raise: function () {
-				var scope = this,
-					args = Array.prototype.slice.call(arguments);
-
-				if (args.length == 0) {
-					return;
-				}
-
-				var theEvent = scope._events[args[0]];
-
-				if (theEvent instanceof SmartEvent) {
-					theEvent.raise.apply(theEvent, args.slice(1));
-				}
-			},
-			release: function () {
-				var eventName;
-
-				if (arguments.length == 0) {
-					for (eventName in this._events) {
-						this._events[eventName].release();
-					}
-				}
-			}
-		};
-
-		return construct;
-	})();
 
 	Observable = (function () {
 		construct = function (newValue) {
@@ -196,57 +72,31 @@ copper = (function($, undefined) {
 		return construct;
 	})();
 
-	ObservableCollection = (function () {
-		construct = function (initialValue) {
-			EventHost.call(this, ['collectionReplaced', 'itemAdded', 'itemRemoved']);
+	SmartEvent = (function () {
+		var construct;
 
-			if (initialValue instanceof Array) {
-				this._value = initialValue;
-			} else {
-				this._value = [];
-			}
+		construct = function (name) {
+			this.name = name;
+			this.handlers = [];
 		};
 
-		construct.prototype = Extender.extendPrototype(EventHost, {
-			val: function (newValue) {
-				if (newValue === undefined) {
-					return this._value;
-				} else {
-					if (!(newValue instanceof Array)) {
-						return;
-					}
-
-					if (this._value != newValue) {
-						this._value = newValue;
-						this.raise('collectionReplaced', newValue);
-					}
+		construct.prototype = {
+			subscribe: function (handler) {
+				if (typeof handler === 'function' && !_(this.handlers).include(handler)) {
+					this.handlers.push(handler);
 				}
 			},
-			add: function (newItem, index) {
-				if (index == undefined) {
-					this._value.push(newItem);
-				} else {
-					this._value.splice(index, 0, newItem);
-					this.raise('itemAdded', newItem, index);
+			unsubscribe: function (handler) {
+				if (typeof handler === 'function') {
+					this.handlers = _(this.handlers).without(handler);
 				}
 			},
-			remove: function (item) {
-				var index = this._value.indexOf(item);
-				if (index != -1) {
-					this.removeAt(index);
-				}
-			},
-			removeAt: function (index) {
-				var sliced = this._value.slice(index + 1),
-					item = this._value[index];
-
-				this._value.length = index;
-				// Calls Array.push with the items after the removed item as the argument array.
-				this._value.push.apply(this._value, sliced);
-
-				this.raise('itemRemoved', item, index);
+			raise: function () {
+				_(this.handlers).each(function (handler) {
+					handler();
+				});
 			}
-		});
+		};
 
 		return construct;
 	})();
@@ -671,7 +521,6 @@ copper = (function($, undefined) {
 	return {
 		Extender: Extender,
 		Observable: Observable,
-		ObservableCollection: ObservableCollection,
 		SmartEvent: SmartEvent,
 		View: View,
 		Bind: Bind,
