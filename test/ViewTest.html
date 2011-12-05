@@ -280,7 +280,7 @@
 			equal(removedIndex, indexToRemove);
 		});
 		
-		test('Given existing collection, when value removed, accessor yields array with value removed.', function () {
+		test('Given existing collection, when value removed at index, accessor yields array with value removed.', function () {
 			// Arrange
 			var initialValue = ['A', 'C', 'B', 'E', 'D'],
 				subject = new copper.ObservableCollection(initialValue),
@@ -296,7 +296,7 @@
 			deepEqual(initialValue, expectedValue);
 		});
 
-		test('Given subscription, when value removed, handler called with new value and index.', function () {
+		test('Given subscription, when value removed at index, handler called with removed value and index.', function () {
 			// Arrange
 			var initialValue = ['A', 'C', 'B', 'E', 'D'],
 				subject = new copper.ObservableCollection(initialValue),
