@@ -364,7 +364,8 @@ copper = (function($, undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindElement(view, property, propertyName);
+					return (this._tryBindElement(view, property, propertyName)
+						|| this._tryBindScopeElement(view, property, propertyName));
 				} else if (typeof property == 'function') {
 					handler = function (e) {
 						if (e && (typeof e.preventDefault == 'function')) {
@@ -374,7 +375,8 @@ copper = (function($, undefined) {
 						property.call(model);
 					};
 					
-					return this._tryBindClick(view, propertyName, handler);
+					return (this._tryBindClick(view, propertyName, handler)
+						|| this._tryBindScopeClick(view, propertyName, handler));
 				}
 				
 				return false;
@@ -383,7 +385,22 @@ copper = (function($, undefined) {
 			_tryBindElement: function (view, property, propertyName) {
 				$element = this._findViewElement(view, propertyName);
 
-				if ($element) {
+				if ($element && $element.length > 0) {
+					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
+						return true;
+					} else {
+						this._bindContent(view, $element, property, propertyName);
+						return true;
+					}
+				}
+
+				return false;
+			},
+			
+			_tryBindScopeElement: function (view, property, propertyName) {
+				$element = view.$documentScope;
+
+				if (propertyName == 'Value' && $element) {
 					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
 						return true;
 					} else {
@@ -423,10 +440,31 @@ copper = (function($, undefined) {
 				property.subscribe(callback);
 			},
 			
+			_tryBindScopeClick: function (view, propertyName, callback) {
+				$element = view.$documentScope;
+
+				if (propertyName == 'Click' && $element && $element.length > 0 && this._isClickable($element)) {
+					this._bindScopeClick(view, $element, callback);
+					return true;
+				}
+
+				return false;
+			},
+			
+			_bindScopeClick: function (view, $element, callback) {
+				var handler = function (e) {
+					callback(e);
+				};
+
+				view['Clicked'] = handler;
+
+				$element.click(handler);
+			},
+			
 			_tryBindClick: function (view, propertyName, callback) {
 				$element = this._findViewElement(view, propertyName);
 
-				if ($element && this._isClickable($element)) {
+				if ($element && $element.length > 0 && this._isClickable($element)) {
 					this._bindClick(view, $element, propertyName, callback);
 					return true;
 				}
@@ -506,7 +544,7 @@ copper = (function($, undefined) {
 			tryBind: function(view, model, state) {
 				var scope = this,
 					propertyName;
-					
+				
 				_(scope._select(view, scope._selector))
 					.forEach(function (element) {
 						var $el = $(element);
@@ -543,6 +581,58 @@ copper = (function($, undefined) {
 				}
 				
 				return false;
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindViewScopeElementToModelStep = (function () {
+		var construct = function () { }
+		
+		construct.prototype = new BindPipelineStep({		
+			tryBind: function(view, model, state) {
+				if (view.$documentScope) {
+					this._tryBindInputScopeToModel(view, view.$documentScope, model);
+				}
+			},
+			
+			_tryBindInputScopeToModel: function (view, $scopeElement, model) {
+				var property = model['Value'];
+				
+				if (property != undefined) {
+					if (property instanceof Observable) {
+						this._bindOvervablePropertyToInput(view, $scopeElement, property);
+						return true;
+					} else if (typeof property != 'function') {
+						this._bindSimplePropertyToInput(view, $scopeElement, model);
+						return true;
+					}
+				}
+
+				return false;
+			},
+			
+			_bindOvervablePropertyToInput: function (view, $scopeElement, property) {
+				var handlerName = 'Value_ViewChanged';
+					callback = function (e) {
+						property.val($(this).val());
+					};
+
+				view[handlerName] = callback;
+
+				$element.change(callback);
+			},
+
+			_bindSimplePropertyToInput: function (view, $scopeElement, model) {
+				var handlerName = 'Value_ViewChanged',
+					callback = function (e) {
+						model['Value'] = $(e.target).val();
+					};
+
+				view[handlerName] = callback;
+
+				$element.change(callback);
 			}
 		});
 		
@@ -665,6 +755,7 @@ copper = (function($, undefined) {
 			new BindModelToHtmlStep(),
 			new BindInputsToViewHandlersStep(),
 			new BindInputsToModelStep(),
+			new BindViewScopeElementToModelStep(),
 			new BindClickablesToViewHandlersStep(),
 			new BindModelDirectlyStep()
 		]
