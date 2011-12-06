@@ -12,7 +12,8 @@ copper = (function($, undefined) {
 		View,
 		BindPipelineStep,
 		BindPipeline,
-		Extender;
+		Extender,
+		Conventions;
 		
 	Extender = {
 		extend: function (target, source, preserveExisting) {
@@ -274,23 +275,26 @@ copper = (function($, undefined) {
 
 		return construct;
 	})();
+	
+	Conventions = {
+		inputSelector: 'select, input[type!=button], input[type!=reset], input[type!=file]',
+		clickableSelector: 'a, button, input[type=submit], input[type=button], input[type=reset]'
+	};
 
 	BindPipelineStep = (function () {
 		var construct = function (strategy) {
 			Extender.extend(this, strategy);
-			this._inputSelector = 'select, input[type!=button], input[type!=reset], input[type!=file]';
-			this._clickableSelector = 'a, button, input[type=submit], input[type=button], input[type=reset]';
 		};
 
 		construct.prototype = {
 			tryBind: function (view, model) { return false; },
 			
 			_isClickable: function ($element) {
-				return $element.is(this._clickableSelector);
+				return $element.is(Conventions.clickableSelector);
 			},
 
 			_isInput: function ($element) {
-				return $element.is(this._inputSelector);
+				return $element.is(Conventions.inputSelector);
 			},
 			
 			_select: function (view, selector) {
@@ -396,7 +400,7 @@ copper = (function($, undefined) {
 					newProperty = propertyName + '_ModelChanged',
 					callback
 					
-				if ($element.is(this._inputSelector)) {
+				if ($element.is(Conventions.inputSelector)) {
 					callback = function (newValue) {
 						$element.val(newValue);
 					};
@@ -521,7 +525,7 @@ copper = (function($, undefined) {
 	
 	BindInputsToViewHandlersStep = (function () {
 		var construct = function () {
-			this._selector = this._inputSelector;
+			this._selector = Conventions.inputSelector;
 		};
 		
 		construct.prototype = new BindHtmlElementStep({
@@ -547,7 +551,7 @@ copper = (function($, undefined) {
 	
 	BindInputsToModelStep = (function () {
 		var construct = function () {
-			this._selector = this._inputSelector;
+			this._selector = Conventions.inputSelector;
 		};
 		
 		construct.prototype = new BindHtmlElementStep({
@@ -600,7 +604,7 @@ copper = (function($, undefined) {
 	
 	BindClickablesToViewHandlersStep = (function () {
 		var construct = function () {
-			this._selector = this._inputSelector;
+			this._selector = Conventions.inputSelector;
 		};
 		
 		construct.prototype = new BindHtmlElementStep({
@@ -675,6 +679,7 @@ copper = (function($, undefined) {
 		SmartEvent: SmartEvent,
 		View: View,
 		Bind: Bind,
-		BindPipelineStep: BindPipelineStep
+		BindPipelineStep: BindPipelineStep,
+		Conventions: Conventions
 	};
 })(jQuery);
