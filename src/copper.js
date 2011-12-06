@@ -365,9 +365,9 @@ copper = (function($, undefined) {
 
 				if (property instanceof Observable) {
 					return this._tryBindElement(view, property, propertyName);
-				} else if (typeof property == "function") {
+				} else if (typeof property == 'function') {
 					handler = function (e) {
-						if (e && (typeof e.preventDefault == "function")) {
+						if (e && (typeof e.preventDefault == 'function')) {
 							e.preventDefault();
 						}
 
@@ -497,7 +497,7 @@ copper = (function($, undefined) {
 				}
 				
 				throw new BindPipelineStepException({
-					message: 'Model property binding step is not implemented.',
+					message: 'Html element binding step is not implemented.',
 					subject: view.$documentScope,
 					member: member || this._selector
 				});
@@ -567,7 +567,7 @@ copper = (function($, undefined) {
 					if (property instanceof Observable) {
 						this._bindOvervablePropertyToInput(view, $element, property, id);
 						return true;
-					} else if (typeof property != "function") {
+					} else if (typeof property != 'function') {
 						this._bindSimplePropertyToInput(view, $element, model, id);
 						return true;
 					}
