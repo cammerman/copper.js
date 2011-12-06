@@ -450,6 +450,23 @@
 		
 		module('Bind');
 
+		test('Given a view with no bindModel method / Bind creates one.', function () {
+			// Arrange
+			var view = {},
+				model = { something: 'something' };
+
+			copper.Bind({
+				model: {},
+				view: view
+			});
+			
+			// Act
+			view.bindModel(model);
+
+			// Assert
+			equal(view._model, model);
+		});
+		
 		givenModelWithFunctionProperty = function (propertyName, propertyFunction, continueTest) {
 			var model = {};
 			model[propertyName] = propertyFunction;

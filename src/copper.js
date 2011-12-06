@@ -727,9 +727,15 @@ copper = (function($, undefined) {
 		
 		construct.prototype = new BindPipelineStep({
 			tryBind: function (view, model) {
+				if (view.bindModel == undefined) {
+					view.bindModel = function (newModel) {
+						this._model = newModel;
+					}
+				}
+				
 				if (typeof view.bindModel == 'function') {
 					view.bindModel(model);
-				}
+				} 
 			}
 		});
 		
