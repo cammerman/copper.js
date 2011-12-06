@@ -132,7 +132,7 @@
 			ok(!handler1Called && !handler2Called);
 		});
 		
-		module("ObservableCollection");
+		module('ObservableCollection');
 
 		test('Given no initial value, when constructed, accessor yields empty array.', function () {
 			// Arrange
@@ -448,7 +448,7 @@
 			ok(_([handler1Called, handler2Called, handler3Called]).all(function (item) { return item; }));
 		});
 		
-		module('View');
+		module('Bind');
 
 		givenModelWithFunctionProperty = function (propertyName, propertyFunction, continueTest) {
 			var model = {};
