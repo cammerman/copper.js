@@ -12,6 +12,7 @@ copper = (function($, undefined) {
 		View,
 		BindPipelineStep,
 		BindPipeline,
+		ModelPropertyBindPipeline,
 		Extender,
 		Conventions;
 		
@@ -333,169 +334,24 @@ copper = (function($, undefined) {
 		};
 		
 		construct.prototype = new BindPipelineStep({
-			_tryBindProperty: function(view, model, propertyName) {
+			tryBindProperty: function(view, model, propertyName) {
 				throw new BindPipelineStepException({
 					message: 'Model property binding step is not implemented.',
 					subject: model,
 					member: propertyName
 				});
-			},
-			
-			tryBind: function(view, model, state) {
-				var scope = this,
-					propertyName;
-
-				for (propertyName in model) {
-					if (!_(state.boundModelProperties).include(propertyName)) {
-						if (scope._tryBindProperty(view, model, propertyName)) {
-							state.boundModelProperties.push(propertyName);
-						}
-					}
-				}
-			},
-		});
-		
-		return construct;
-	})();
-	
-	BindModelToHtmlStep = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelPropertyStep({
-		
-			_tryBindProperty: function (view, model, propertyName) {
-				var property = model[propertyName],
-					handler;
-
-				if (property instanceof Observable) {
-					return (this._tryBindElement(view, property, propertyName)
-						|| this._tryBindScopeElement(view, property, propertyName));
-				} else if (typeof property == 'function') {
-					handler = function (e) {
-						if (e && (typeof e.preventDefault == 'function')) {
-							e.preventDefault();
-						}
-
-						property.call(model);
-					};
-					
-					return (this._tryBindClick(view, propertyName, handler)
-						|| this._tryBindScopeClick(view, propertyName, handler));
-				}
-				
-				return false;
-			},
-			
-			_tryBindElement: function (view, property, propertyName) {
-				$element = this._findViewElement(view, propertyName);
-
-				if ($element && $element.length > 0) {
-					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
-						return true;
-					} else {
-						this._bindContent(view, $element, property, propertyName);
-						return true;
-					}
-				}
-
-				return false;
-			},
-			
-			_tryBindScopeElement: function (view, property, propertyName) {
-				$element = view.$documentScope;
-
-				if (propertyName == 'Value' && $element) {
-					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
-						return true;
-					} else {
-						this._bindContent(view, $element, property, propertyName);
-						return true;
-					}
-				}
-
-				return false;
-			},
-			
-			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
-				var scope = this,
-					newProperty = propertyName + '_ModelChanged',
-					callback
-					
-				if ($element.is(Conventions.inputSelector)) {
-					callback = function (newValue) {
-						$element.val(newValue);
-					};
-					view[newProperty] = callback;
-					property.subscribe(callback);
-					
-					return true;
-				}
-
-				return false;
-			},
-			
-			_bindContent: function (view, $element, property, propertyName) {
-				var callback = function (newValue) {
-					$element.html(newValue);
-				};
-
-				view[propertyName + '_ModelChanged'] = callback;
-
-				property.subscribe(callback);
-			},
-			
-			_tryBindScopeClick: function (view, propertyName, callback) {
-				$element = view.$documentScope;
-
-				if (propertyName == 'Click' && $element && $element.length > 0 && this._isClickable($element)) {
-					this._bindScopeClick(view, $element, callback);
-					return true;
-				}
-
-				return false;
-			},
-			
-			_bindScopeClick: function (view, $element, callback) {
-				var handler = function (e) {
-					callback(e);
-				};
-
-				view['Clicked'] = handler;
-
-				$element.click(handler);
-			},
-			
-			_tryBindClick: function (view, propertyName, callback) {
-				$element = this._findViewElement(view, propertyName);
-
-				if ($element && $element.length > 0 && this._isClickable($element)) {
-					this._bindClick(view, $element, propertyName, callback);
-					return true;
-				}
-
-				return false;
-			},
-			
-			_bindClick: function (view, $element, propertyName, callback) {
-				var handler = function (e) {
-					callback(e);
-				};
-
-				view[propertyName + '_Clicked'] = handler;
-
-				$element.click(handler);
 			}
 		});
 		
 		return construct;
 	})();
 	
-	BindModelToViewHandlersStep = (function () {
+	BindModelObservablePropertyToViewHandler = (function () {
 		var construct = function () { };
 		
 		construct.prototype = new BindModelPropertyStep({
 		
-			_tryBindProperty: function (view, model, propertyName) {
+			tryBindProperty: function (view, model, propertyName) {
 				var property = model[propertyName],
 					handler;
 
@@ -524,6 +380,298 @@ copper = (function($, undefined) {
 		
 		return construct;
 	})();
+	
+	BindModelObservablePropertyToInput = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelPropertyStep({
+		
+			tryBindProperty: function (view, model, propertyName) {
+				var property = model[propertyName],
+					handler;
+
+				if (property instanceof Observable) {
+					return this._tryBindElement(view, property, propertyName);
+				}
+				
+				return false;
+			},
+			
+			_tryBindElement: function (view, property, propertyName) {
+				$element = this._findViewElement(view, propertyName);
+
+				if ($element && $element.length > 0) {
+					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
+						return true;
+					}
+				}
+
+				return false;
+			},
+			
+			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
+				var scope = this,
+					newProperty = propertyName + '_ModelChanged',
+					callback
+					
+				if ($element.is(Conventions.inputSelector)) {
+					callback = function (newValue) {
+						$element.val(newValue);
+					};
+					view[newProperty] = callback;
+					property.subscribe(callback);
+					
+					return true;
+				}
+
+				return false;
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelObservablePropertyToContent = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelPropertyStep({
+		
+			tryBindProperty: function (view, model, propertyName) {
+				var property = model[propertyName],
+					handler;
+
+				if (property instanceof Observable) {
+					return this._tryBindElement(view, property, propertyName);
+				}
+				
+				return false;
+			},
+			
+			_tryBindElement: function (view, property, propertyName) {
+				$element = this._findViewElement(view, propertyName);
+
+				if ($element && $element.length > 0) {
+					if (!$element.is(Conventions.inputSelector)) {
+						return this._bindContent(view, $element, property, propertyName);
+					}
+				}
+
+				return false;
+			},
+						
+			_bindContent: function (view, $element, property, propertyName) {
+				var callback = function (newValue) {
+					$element.html(newValue);
+				};
+
+				view[propertyName + '_ModelChanged'] = callback;
+
+				property.subscribe(callback);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelObservablePropertyToInputScope = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelPropertyStep({
+		
+			tryBindProperty: function (view, model, propertyName) {
+				var property = model[propertyName],
+					handler;
+
+				if (property instanceof Observable) {
+					return this._tryBindScopeElement(view, property, propertyName);
+				}
+				
+				return false;
+			},
+			
+			_tryBindScopeElement: function (view, property, propertyName) {
+				$element = view.$documentScope;
+
+				if (propertyName == 'Value' && $element) {
+					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
+						return true;
+					}
+				}
+
+				return false;
+			},
+			
+			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
+				var scope = this,
+					newProperty = propertyName + '_ModelChanged',
+					callback
+					
+				if ($element.is(Conventions.inputSelector)) {
+					callback = function (newValue) {
+						$element.val(newValue);
+					};
+					view[newProperty] = callback;
+					property.subscribe(callback);
+					
+					return true;
+				}
+
+				return false;
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelObservablePropertyToInputContent = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelPropertyStep({
+		
+			tryBindProperty: function (view, model, propertyName) {
+				var property = model[propertyName],
+					handler;
+
+				if (property instanceof Observable) {
+					return this._tryBindScopeElement(view, property, propertyName);
+				}
+				
+				return false;
+			},
+			
+			_tryBindScopeElement: function (view, property, propertyName) {
+				$element = view.$documentScope;
+
+				if (propertyName == 'Value' && $element) {
+					if (!$element.is(Conventions.inputSelector)) {
+						return this._bindContent(view, $element, property, propertyName);
+					}
+				}
+
+				return false;
+			},
+			
+			_bindContent: function (view, $element, property, propertyName) {
+				var callback = function (newValue) {
+					$element.html(newValue);
+				};
+
+				view[propertyName + '_ModelChanged'] = callback;
+
+				property.subscribe(callback);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelFunctionPropertyToClickable = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelPropertyStep({
+		
+			tryBindProperty: function (view, model, propertyName) {
+				var property = model[propertyName],
+					handler;
+
+				if (typeof property == 'function') {
+					handler = function (e) {
+						if (e && (typeof e.preventDefault == 'function')) {
+							e.preventDefault();
+						}
+
+						property.call(model);
+					};
+					
+					return this._tryBindClick(view, propertyName, handler);
+				}
+				
+				return false;
+			},
+			
+			_tryBindClick: function (view, propertyName, callback) {
+				$element = this._findViewElement(view, propertyName);
+
+				if ($element && $element.length > 0 && this._isClickable($element)) {
+					this._bindClick(view, $element, propertyName, callback);
+					return true;
+				}
+
+				return false;
+			},
+			
+			_bindClick: function (view, $element, propertyName, callback) {
+				var handler = function (e) {
+					callback(e);
+				};
+
+				view[propertyName + '_Clicked'] = handler;
+
+				$element.click(handler);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelFunctionPropertyToClickableScope = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelPropertyStep({
+		
+			tryBindProperty: function (view, model, propertyName) {
+				var property = model[propertyName],
+					handler;
+
+				if (typeof property == 'function') {
+					handler = function (e) {
+						if (e && (typeof e.preventDefault == 'function')) {
+							e.preventDefault();
+						}
+
+						property.call(model);
+					};
+					
+					return this._tryBindScopeClick(view, propertyName, handler);
+				}
+				
+				return false;
+			},
+			
+			_tryBindScopeClick: function (view, propertyName, callback) {
+				$element = view.$documentScope;
+
+				if (propertyName == 'Click' && $element && $element.length > 0 && this._isClickable($element)) {
+					this._bindScopeClick(view, $element, callback);
+					return true;
+				}
+
+				return false;
+			},
+			
+			_bindScopeClick: function (view, $element, callback) {
+				var handler = function (e) {
+					callback(e);
+				};
+
+				view['Clicked'] = handler;
+
+				$element.click(handler);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	ModelPropertyBindPipeline = [
+		new BindModelObservablePropertyToViewHandler(),
+		new BindModelObservablePropertyToInput(),
+		new BindModelObservablePropertyToContent(),
+		new BindModelObservablePropertyToInputScope(),
+		new BindModelObservablePropertyToInputContent(),
+		new BindModelFunctionPropertyToClickable(),
+		new BindModelFunctionPropertyToClickableScope()
+	];
 	
 	BindHtmlElementStep = (function () {
 		var construct = function (strategy) {
@@ -559,6 +707,31 @@ copper = (function($, undefined) {
 							}
 						}
 					});
+			},
+		});
+		
+		return construct;
+	})();
+	
+	BindModelPropertiesStep = (function () {
+		var construct = function (strategy) {
+			Extender.extend(this, strategy);
+		};
+		
+		construct.prototype = new BindPipelineStep({
+			tryBind: function(view, model, state) {
+				var scope = this,
+					propertyName;
+
+				for (propertyName in model) {
+					_(ModelPropertyBindPipeline).forEach(function (step) {
+						if (!_(state.boundModelProperties).include(propertyName)) {
+							if (step.tryBindProperty(view, model, propertyName)) {
+								state.boundModelProperties.push(propertyName);
+							}
+						}
+					});
+				}
 			},
 		});
 		
@@ -761,8 +934,7 @@ copper = (function($, undefined) {
 		};
 		
 		bind.pipeline = [
-			new BindModelToViewHandlersStep(),
-			new BindModelToHtmlStep(),
+			new BindModelPropertiesStep(),
 			new BindInputsToViewHandlersStep(),
 			new BindInputsToModelStep(),
 			new BindViewScopeElementToModelStep(),
