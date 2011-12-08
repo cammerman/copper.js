@@ -224,12 +224,16 @@ copper = (function($, undefined) {
 				}
 			},
 			add: function (newItem, index) {
+				var index;
+				
 				if (index == undefined) {
+					index = this._value.length;
 					this._value.push(newItem);
 				} else {
 					this._value.splice(index, 0, newItem);
-					this.raise('itemAdded', newItem, index);
 				}
+				
+				this.raise('itemAdded', newItem, index);
 			},
 			remove: function (item) {
 				var index = this._value.indexOf(item);

@@ -203,6 +203,28 @@
 			deepEqual(initialValue, expectedValue);
 		});
 		
+		test('Given subscription, when value added, handler called with new value and index.', function () {
+			// Arrange
+			var initialValue = ['A', 'B', 'D', 'E'],
+				subject = new copper.ObservableCollection(initialValue),
+				valueToAdd = 'C',
+				indexToAdd = initialValue.length,
+				valueAdded,
+				addedIndex;
+
+			subject.subscribe('itemAdded', function (item, index) {
+				valueAdded = item;
+				addedIndex = index;
+			});
+
+			// Act
+			subject.add(valueToAdd);
+
+			// Assert
+			equal(valueAdded, valueToAdd);
+			equal(addedIndex, indexToAdd);
+		});
+		
 		test('Given existing collection, when value added at index, accessor yields array with added value.', function () {
 			// Arrange
 			var initialValue = ['A', 'B', 'D', 'E'],
