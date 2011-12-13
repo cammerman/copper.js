@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en-US">
+<html dir="ltr" lang="en-US">
 	<head>
 		<title>JS Infrastructure Tests - View</title>
 		<link href="../ext/qunit.css" rel="stylesheet" type="text/css" />
@@ -23,6 +23,7 @@
 			<input id="helloInputReset" type="reset" />
 			<p id="dynamicContent"></p>
 			<input id="dynamicInput" type="text" />
+			<input name="namedInput" type="text" />
 			<div id="subView">
 			</div>
 		</div>
@@ -631,6 +632,12 @@
 			$('#' + id).val(value);
 			continueTest();
 		};
+		
+		var givenInputWithNameHasValue = function (id, value, continueTest) {
+			var selector = 'input[name="' + id + '"]';
+			$(selector).val(value);
+			continueTest(selector);
+		};
 
 		test('Given a model with an Observable property with name the same ID as an element in the HTML / When observable changes / HTML element content is changed to match observable value', function () {
 			expect(1);
@@ -672,6 +679,30 @@
 
 					// Act
 					$('#' + propertyName).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name the same as an input name in the HTML / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'namedInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithNameHasValue(propertyName, oldValue, function (selector) {
+					copper.Bind({ model: model });
+					$(selector).val(newValue);
+
+					// Act
+					$(selector).trigger('change');
 
 					// Assert
 					equal(model[propertyName].val(), newValue);
@@ -791,7 +822,7 @@
 			});
 		});
 
-		test('Given an view with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
+		test('Given a view with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
 			// Arrange
 			var called = false,
 				extendSource,
@@ -813,7 +844,7 @@
 			ok(called);
 		});
 
-		test('Given an view with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Clicking the button calls the property from the extension source.', function () {
+		test('Given a view with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Clicking the button calls the property from the extension source.', function () {
 			// Arrange
 			var called = false,
 				extendSource,
