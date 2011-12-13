@@ -4,7 +4,7 @@
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
     Version 0.2.0
 */
-copper = (function($, undefined) {
+copper  = (function($, undefined) {
 	var Observable,
 		ObservableCollection,
 		EventHost,
@@ -160,7 +160,7 @@ copper = (function($, undefined) {
 	Observable = (function () {
 		construct = function (newValue) {
 			this._subscriptions = this._subscriptions || [];
-			this._value = newValue || null;
+			this._value = (newValue == undefined) ? null : newValue;
 		};
 
 		construct.prototype = {
@@ -282,7 +282,8 @@ copper = (function($, undefined) {
 	})();
 	
 	Conventions = {
-		inputSelector: 'select, input[type!=button], input[type!=reset], input[type!=file]',
+		inputSelector: 'select, input[type!=button][type!=reset][type!=file][type!=checkbox][type!=radio]',
+		checkableSelector: 'input[type=checkbox], input[type=radio]',
 		clickableSelector: 'a, button, input[type=submit], input[type=button], input[type=reset]'
 	};
 
@@ -302,9 +303,13 @@ copper = (function($, undefined) {
 				return $element.is(Conventions.inputSelector);
 			},
 			
+			_isCheckable: function ($element) {
+				return $element.is(Conventions.checkableSelector);
+			},
+
 			_select: function (view, selector) {
 				if (view.$documentScope) {
-					return view.$documentScope.filter(selector);
+					return view.$documentScope.find(selector);
 				} else {
 					return $(selector);
 				}
@@ -422,15 +427,21 @@ copper = (function($, undefined) {
 			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
 				var scope = this,
 					newProperty = propertyName + '_ModelChanged',
-					callback
+					callback;
 					
-				if ($element.is(Conventions.inputSelector)) {
+				if (scope._isInput($element)) {
 					callback = function (newValue) {
 						$element.val(newValue);
 					};
+				} else if (scope._isCheckable($element)) {
+					callback = function (newValue) {
+						$element.attr('checked', (newValue ? 'checked' : ''));
+					};
+				}
+
+				if (callback != undefined) {
 					view[newProperty] = callback;
 					property.subscribe(callback);
-					
 					return true;
 				}
 
@@ -511,7 +522,7 @@ copper = (function($, undefined) {
 				$element = this._findBindableElement(view, propertyName);
 
 				if ($element && $element.length > 0) {
-					if (!$element.is(Conventions.inputSelector)) {
+					if (!this._isInput($element) && !this._isCheckable($element)) {
 						return this._bindContent(view, $element, property, propertyName);
 					}
 				}
@@ -589,12 +600,19 @@ copper = (function($, undefined) {
 			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
 				var scope = this,
 					newProperty = propertyName + '_ModelChanged',
-					callback
+					callback;
 					
-				if ($element.is(Conventions.inputSelector)) {
+				if (scope._isInput($element)) {
 					callback = function (newValue) {
 						$element.val(newValue);
 					};
+				} else if (scope._isCheckable($element)) {
+					callback = function (newValue) {
+						$element.attr('checked', (newValue ? 'checked' : ''));
+					};
+				}
+
+				if (callback) {
 					view[newProperty] = callback;
 					property.subscribe(callback);
 					
@@ -628,7 +646,7 @@ copper = (function($, undefined) {
 				$element = view.$documentScope;
 
 				if (propertyName == 'Value' && $element) {
-					if (!$element.is(Conventions.inputSelector)) {
+					if (this._isInput($element)) {
 						return this._bindContent(view, $element, property, propertyName);
 					}
 				}
@@ -864,7 +882,7 @@ copper = (function($, undefined) {
 	
 	BindInputsByIdToViewHandlersStep = (function () {
 		var construct = function () {
-			this._selector = Conventions.inputSelector;
+			this._selector = [Conventions.inputSelector, Conventions.checkableSelector].join(',');
 		};
 		
 		construct.prototype = new BindHtmlElementStep({
@@ -874,11 +892,19 @@ copper = (function($, undefined) {
 					callback;
 
 				if (id != undefined && view[newProperty] != undefined) {
-					$el.change(function (e) {
-						view[newProperty](e);
-					});
-					
-					return true;
+					if (this._isInput($el)) {
+						$el.change(function (e) {
+							view[newProperty](e);
+						});
+
+						return true;
+					} else if (this._isCheckable($el)) {
+						$el.click(function (e) {
+							view[newProperty]($(this).is(':checked'));
+						});
+
+						return true;
+					}
 				}
 				
 				return false;
@@ -890,7 +916,7 @@ copper = (function($, undefined) {
 	
 	BindInputsByNameToViewHandlersStep = (function () {
 		var construct = function () {
-			this._selector = Conventions.inputSelector;
+			this._selector = [Conventions.inputSelector, Conventions.checkableSelector].join(',');
 		};
 		
 		construct.prototype = new BindHtmlElementStep({
@@ -900,9 +926,19 @@ copper = (function($, undefined) {
 					callback;
 
 				if (id != undefined && view[newProperty] != undefined) {
-					$el.change(function (e) {
-						view[newProperty](e);
-					});
+					if (this._isInput($el)) {
+						$el.change(function (e) {
+							view[newProperty](e);
+						});
+
+						return true;
+					} else if (this._isCheckable($el)) {
+						$el.click(function (e) {
+							view[newProperty]($(this).is(':checked'));
+						});
+
+						return true;
+					}
 					
 					return true;
 				}
@@ -941,25 +977,45 @@ copper = (function($, undefined) {
 			},
 			
 			_bindOvervablePropertyToInput: function (view, $scopeElement, property) {
-				var handlerName = 'Value_ViewChanged';
+				var handlerName = 'Value_ViewChanged',
+					callback;
+					
+				if (this._isInput($element)) {
 					callback = function (e) {
 						property.val($(this).val());
 					};
 
-				view[handlerName] = callback;
+					view[handlerName] = callback;		
+					$element.change(callback);
+				} else if (this._isCheckable($element)) {
+					callback = function (e) {
+						property.val($(this).is(':checked'));
+					};
 
-				$element.change(callback);
+					view[handlerName] = callback;
+					$element.click(callback);
+				}
 			},
 
 			_bindSimplePropertyToInput: function (view, $scopeElement, model) {
 				var handlerName = 'Value_ViewChanged',
+					callback;
+
+				if (this._isInput($element)) {
 					callback = function (e) {
 						model['Value'] = $(e.target).val();
 					};
 
-				view[handlerName] = callback;
+					view[handlerName] = callback;		
+					$element.change(callback);
+				} else if (this._isCheckable($element)) {
+					callback = function (e) {
+						model['Value'] = $(e.target).is(':checked');
+					};
 
-				$element.change(callback);
+					view[handlerName] = callback;
+					$element.click(callback);
+				}
 			}
 		});
 		
@@ -969,7 +1025,7 @@ copper = (function($, undefined) {
 	BindInputsToModelStep = (function () {
 		var construct = function (strategy) {
 			Extender.extend(this, strategy);
-			this._selector = Conventions.inputSelector;
+			this._selector = [Conventions.inputSelector, Conventions.checkableSelector].join(',');
 		};
 		
 		construct.prototype = new BindHtmlElementStep({
@@ -993,27 +1049,47 @@ copper = (function($, undefined) {
 
 				return false;
 			},
-			
+
 			_bindOvervablePropertyToInput: function (view, $element, property, propertyName) {
-				var handlerName = propertyName + '_ViewChanged';
+				var handlerName = propertyName + '_ViewChanged',
+					callback;
+					
+				if (this._isInput($element)) {
 					callback = function (e) {
 						property.val($(this).val());
 					};
 
-				view[handlerName] = callback;
+					view[handlerName] = callback;		
+					$element.change(callback);
+				} else if (this._isCheckable($element)) {
+					callback = function (e) {
+						property.val($(this).is(':checked'));
+					};
 
-				$element.change(callback);
+					view[handlerName] = callback;
+					$element.click(callback);
+				}
 			},
 
 			_bindSimplePropertyToInput: function (view, $element, model, propertyName) {
 				var handlerName = propertyName + '_ViewChanged',
+					callback;
+
+				if (this._isInput($element)) {
 					callback = function (e) {
 						model[propertyName] = $(e.target).val();
 					};
 
-				view[handlerName] = callback;
+					view[handlerName] = callback;		
+					$element.change(callback);
+				} else if (this._isCheckable($element)) {
+					callback = function (e) {
+						model[propertyName] = $(e.target).is(':checked');
+					};
 
-				$element.change(callback);
+					view[handlerName] = callback;
+					$element.click(callback);
+				}
 			}
 		});
 		
@@ -1022,7 +1098,6 @@ copper = (function($, undefined) {
 	
 	BindInputsToModelBySelectorStep = (function () {
 		var construct = function () {
-			this._selector = Conventions.inputSelector;
 		};
 		
 		construct.prototype = new BindInputsToModelStep({
@@ -1045,7 +1120,6 @@ copper = (function($, undefined) {
 	
 	BindInputsToModelByIdStep = (function () {
 		var construct = function () {
-			this._selector = Conventions.inputSelector;
 		};
 		
 		construct.prototype = new BindInputsToModelStep({
@@ -1059,7 +1133,6 @@ copper = (function($, undefined) {
 	
 	BindInputsToModelByNameStep = (function () {
 		var construct = function () {
-			this._selector = Conventions.inputSelector;
 		};
 		
 		construct.prototype = new BindInputsToModelStep({
@@ -1073,7 +1146,7 @@ copper = (function($, undefined) {
 	
 	BindClickablesToViewHandlersStep = (function () {
 		var construct = function () {
-			this._selector = Conventions.inputSelector;
+			this._selector = Conventions.clickableSelector;
 		};
 		
 		construct.prototype = new BindHtmlElementStep({
@@ -1138,14 +1211,14 @@ copper = (function($, undefined) {
 		};
 		
 		bind.pipeline = [
-			new BindModelPropertiesStep(),
 			new BindInputsByIdToViewHandlersStep(),
 			new BindInputsByNameToViewHandlersStep(),
+			new BindClickablesToViewHandlersStep(),
+			new BindModelPropertiesStep(),
 			new BindInputsToModelBySelectorStep(),
 			new BindInputsToModelByIdStep(),
 			new BindInputsToModelByNameStep(),
 			new BindViewScopeElementToModelStep(),
-			new BindClickablesToViewHandlersStep(),
 			new BindModelDirectlyStep()
 		]
 		
