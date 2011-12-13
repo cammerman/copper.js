@@ -22,6 +22,7 @@
 			<input id="helloInputButton" type="button" />
 			<input id="helloInputReset" type="reset" />
 			<p id="dynamicContent"></p>
+			<p id="dynamicClass"></p>
 			<input id="dynamicInput" type="text" />
 			<input name="namedInput" type="text" />
 			<div id="subView">
@@ -512,6 +513,32 @@
 			// Assert
 			ok(called);
 		});
+		
+		test('Given a model with a function property /  Given a view selector hash entry with name of function property and matching an anchor in the HTML / When anchor clicked / Calls the function ', function () {
+			// Arrange
+			var called = false,
+				propertyName = 'overreaction',
+				id = 'helloAnchor',
+				propertyFunction = function () { called = true; },
+				selectors = {};
+				
+			selectors[propertyName] = '#' + id;
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				copper.Bind({
+					model: model,
+					view: {
+						selectorFor: selectors
+					}
+				});
+
+				// Act
+				$('#' + id).click();
+			});
+
+			// Assert
+			ok(called);
+		});
 
 		test('Given a model with a function property with name the same ID as a button in the HTML / When button clicked / Calls the function ', function () {
 			// Arrange
@@ -661,6 +688,73 @@
 				});
 			});
 		});
+		
+		test('Given a model with an Observable property / Given a view selector hash entry with name of Observable property and value of an HTML element / When observable changes / Content of HTML element selected by hashed selector is changed to match observable value', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'some awesome property',
+				id = 'dynamicContent',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.',
+				selectors = {};
+			
+			selectors[propertyName] = '#' + id;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(id, oldContent, function () {
+					copper.Bind({
+						model: model,
+						view: {
+							selectorFor: selectors
+						}
+					});
+
+					// Act
+					model[propertyName].val(newContent);
+
+					// Assert
+					equal($('#' + id).html(), newContent);
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view selector hash entry with name of Observable property and value of input in the HTML / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.',
+				selectors = {};
+			
+			selectors[propertyName] = '#' + id;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					copper.Bind({
+						model: model,
+						view: {
+							selectorFor: selectors
+						}
+					});
+					
+					
+					$('#' + id).val(newValue);
+
+					// Act
+					$('#' + id).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
 
 		test('Given a model with an Observable property with name the same ID as an input in the HTML / When input changes / Observable value is changed to match value of input', function () {
 			expect(1);
@@ -686,6 +780,29 @@
 			});
 		});
 		
+		test('Given a model with an Observable property with name the same ID as an input in the HTML / When obseravble changes / Input value is changed to match observable value', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					copper.Bind({ model: model });
+					
+					// Act
+					model[propertyName].val(newValue);
+
+					// Assert
+					equal($('#' + propertyName).val(), newValue);
+				});
+			});
+		});
+		
 		test('Given a model with an Observable property with name the same as an input name in the HTML / When input changes / Observable value is changed to match value of input', function () {
 			expect(1);
 
@@ -706,6 +823,29 @@
 
 					// Assert
 					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name the same as an input name in the HTML / When observable changes / Input value is changed to match observable value', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'namedInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithNameHasValue(propertyName, oldValue, function (selector) {
+					copper.Bind({ model: model });
+					
+					// Act
+					model[propertyName].val(newValue);
+
+					// Assert
+					equal($(selector).val(), newValue);
 				});
 			});
 		});
@@ -771,7 +911,7 @@
 			});
 		});
 
-		test('Given a model with an Observable property with name not found in HTML / Constructor does not throw', function () {
+		test('Given a model with an Observable property with name not found in HTML or selector hash / Constructor does not throw', function () {
 			expect(1);
 
 			// Arrange

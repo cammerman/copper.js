@@ -441,6 +441,20 @@ copper = (function($, undefined) {
 		return construct;
 	})();
 	
+	BindModelObservablePropertyToInputBySelector = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelObservablePropertyToInput({
+		
+			_findBindableElement: function (view, propertyName) {
+				var selector = view.selectorFor[propertyName];
+				return (selector == undefined) ? undefined : this._select(view, selector);
+			}
+		});
+		
+		return construct;
+	})();
+	
 	BindModelObservablePropertyToInputById = (function () {
 		var construct = function () { };
 		
@@ -468,10 +482,20 @@ copper = (function($, undefined) {
 	})();
 	
 	BindModelObservablePropertyToContent = (function () {
-		var construct = function () { };
+		var construct = function (strategy) {
+			Extender.extend(this, strategy);
+		};
 		
 		construct.prototype = new BindModelPropertyStep({
 		
+			_findBindableElement: function (view, propertyName) {
+				throw new BindPipelineStepException({
+					message: 'Element selector is not implemented.',
+					subject: view.$documentScope,
+					member: member || this._selector
+				});
+			},
+			
 			tryBindProperty: function (view, model, propertyName) {
 				var property = model[propertyName],
 					handler;
@@ -484,7 +508,7 @@ copper = (function($, undefined) {
 			},
 			
 			_tryBindElement: function (view, property, propertyName) {
-				$element = this._findViewElement(view, propertyName);
+				$element = this._findBindableElement(view, propertyName);
 
 				if ($element && $element.length > 0) {
 					if (!$element.is(Conventions.inputSelector)) {
@@ -503,6 +527,31 @@ copper = (function($, undefined) {
 				view[propertyName + '_ModelChanged'] = callback;
 
 				property.subscribe(callback);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelObservablePropertyToContentById = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelObservablePropertyToContent({
+			_findBindableElement: function (view, propertyName) {
+				return this._findViewElement(view, propertyName);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelObservablePropertyToContentBySelector = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelObservablePropertyToContent({
+			_findBindableElement: function (view, propertyName) {
+				var selector = view.selectorFor[propertyName];
+				return (selector == undefined) ? undefined : this._select(view, selector);
 			}
 		});
 		
@@ -602,10 +651,20 @@ copper = (function($, undefined) {
 	})();
 	
 	BindModelFunctionPropertyToClickable = (function () {
-		var construct = function () { };
+		var construct = function (strategy) {
+			Extender.extend(this, strategy);
+		};
 		
 		construct.prototype = new BindModelPropertyStep({
 		
+			_findBindableElement: function (view, propertyName) {
+				throw new BindPipelineStepException({
+					message: 'Element selector is not implemented.',
+					subject: view.$documentScope,
+					member: member || this._selector
+				});
+			},
+			
 			tryBindProperty: function (view, model, propertyName) {
 				var property = model[propertyName],
 					handler;
@@ -626,7 +685,7 @@ copper = (function($, undefined) {
 			},
 			
 			_tryBindClick: function (view, propertyName, callback) {
-				$element = this._findViewElement(view, propertyName);
+				$element = this._findBindableElement(view, propertyName);
 
 				if ($element && $element.length > 0 && this._isClickable($element)) {
 					this._bindClick(view, $element, propertyName, callback);
@@ -644,6 +703,31 @@ copper = (function($, undefined) {
 				view[propertyName + '_Clicked'] = handler;
 
 				$element.click(handler);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelFunctionPropertyToClickableBySelector = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelFunctionPropertyToClickable({
+			_findBindableElement: function (view, propertyName) {
+				var selector = view.selectorFor[propertyName];
+				return (selector == undefined) ? undefined : this._select(view, selector);
+			}
+		});
+		
+		return construct;
+	})();
+	
+	BindModelFunctionPropertyToClickableById = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindModelFunctionPropertyToClickable({
+			_findBindableElement: function (view, propertyName) {
+				return this._findViewElement(view, propertyName);
 			}
 		});
 		
@@ -701,12 +785,15 @@ copper = (function($, undefined) {
 	
 	ModelPropertyBindPipeline = [
 		new BindModelObservablePropertyToViewHandler(),
+		new BindModelObservablePropertyToInputBySelector(),
 		new BindModelObservablePropertyToInputById(),
 		new BindModelObservablePropertyToInputByName(),
-		new BindModelObservablePropertyToContent(),
+		new BindModelObservablePropertyToContentBySelector(),
+		new BindModelObservablePropertyToContentById(),
 		new BindModelObservablePropertyToInputScope(),
 		new BindModelObservablePropertyToInputContent(),
-		new BindModelFunctionPropertyToClickable(),
+		new BindModelFunctionPropertyToClickableBySelector(),
+		new BindModelFunctionPropertyToClickableById(),
 		new BindModelFunctionPropertyToClickableScope()
 	];
 	
@@ -891,7 +978,7 @@ copper = (function($, undefined) {
 			},
 			
 			_tryBindInputToModel: function (view, $element, model) {
-				var propertyName = this._propertyName($element);
+				var propertyName = this._propertyName($element, view);
 				var property = model[propertyName];
 
 				if (propertyName != undefined && property != undefined) {
@@ -933,13 +1020,36 @@ copper = (function($, undefined) {
 		return construct;
 	})();
 	
+	BindInputsToModelBySelectorStep = (function () {
+		var construct = function () {
+			this._selector = Conventions.inputSelector;
+		};
+		
+		construct.prototype = new BindInputsToModelStep({
+			_propertyName: function ($element, view) {
+				var selectorFor = view.selectorFor,
+					property;
+				
+				for (property in view.selectorFor) {
+					if ($element.is(selectorFor[property])) {
+						return property;
+					}
+					
+					return undefined;
+				}
+			}
+		});
+		
+		return construct;
+	})();
+	
 	BindInputsToModelByIdStep = (function () {
 		var construct = function () {
 			this._selector = Conventions.inputSelector;
 		};
 		
 		construct.prototype = new BindInputsToModelStep({
-			_propertyName: function ($element) {
+			_propertyName: function ($element, view) {
 				return $element.attr('id');
 			}
 		});
@@ -953,7 +1063,7 @@ copper = (function($, undefined) {
 		};
 		
 		construct.prototype = new BindInputsToModelStep({
-			_propertyName: function ($element) {
+			_propertyName: function ($element, view) {
 				return $element.attr('name');
 			}
 		});
@@ -1020,6 +1130,8 @@ copper = (function($, undefined) {
 					boundViewElements: []
 				};
 				
+			view.selectorFor = view.selectorFor || {};
+				
 			_(bind.pipeline).forEach(function (step) {
 				step.tryBind(view, model, bindingState);
 			});
@@ -1029,6 +1141,7 @@ copper = (function($, undefined) {
 			new BindModelPropertiesStep(),
 			new BindInputsByIdToViewHandlersStep(),
 			new BindInputsByNameToViewHandlersStep(),
+			new BindInputsToModelBySelectorStep(),
 			new BindInputsToModelByIdStep(),
 			new BindInputsToModelByNameStep(),
 			new BindViewScopeElementToModelStep(),
