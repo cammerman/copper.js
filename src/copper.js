@@ -237,7 +237,7 @@ copper  = (function($, undefined) {
 				}
 			},
 			remove: function (item) {
-				var index = this._value.indexOf(item);
+				var index = _(this._value).indexOf(item);
 				if (index != -1) {
 					this.removeAt(index);
 				}
