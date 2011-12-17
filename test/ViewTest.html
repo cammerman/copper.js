@@ -27,6 +27,7 @@
 			<input name="namedInput" type="text" />
 			<div id="subView">
 			</div>
+			<div id="modalElement"></div>
 		</div>
 	</body>
 	<script>
@@ -879,7 +880,101 @@
 				});
 			});
 		});
+		
+		test('Given a model with an Observable property named "Is_X" and a view with a classless scope element / When observable becomes true / HTML element receives a class of X', function () {
+			expect(1);
 
+			// Arrange
+			var called = false,
+				mode = 'changed',
+				propertyName = 'Is_' + mode,
+				elementId = 'modalElement',
+				$docScope = $('#' + elementId),
+				initialValue = false;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				copper.Bind({
+					view: {
+						$documentScope: $docScope
+					},
+					model: model
+				});
+
+				// Act
+				model[propertyName].val(true);
+
+				// Assert
+				ok($docScope.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property named "Is_X" and a view with a classed scope element / When observable becomes false / HTML element loses class of X', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				mode = 'changed',
+				propertyName = 'Is_' + mode,
+				elementId = 'modalElement',
+				$docScope = $('#' + elementId),
+				initialValue = true;
+
+			givenElementWithClass($docScope, mode, function() {
+				givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+					copper.Bind({
+						view: {
+							$documentScope: $docScope
+						},
+						model: model
+					});
+
+					// Act
+					model[propertyName].val(false);
+
+					// Assert
+					ok(!$docScope.hasClass(mode));
+				});
+			});
+		});
+		
+		var givenElementWithClass = function ($element, extraClass, continueTest) {
+			if (!$element.hasClass(extraClass)) {
+				$element.addClass(extraClass);
+			}
+			
+			continueTest();
+		};
+
+		test('Given a model with an Observable property named "Is_X" and a view with a multi-classed scope element / When observable becomes false / HTML element does not lose non-X classes', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				mode = 'changed',
+				propertyName = 'Is_' + mode,
+				elementId = 'modalElement',
+				$docScope = $('#' + elementId),
+				initialValue = true,
+				extraClass = 'something';
+				
+			givenElementWithClass($docScope, extraClass, function() {
+				givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+					copper.Bind({
+						view: {
+							$documentScope: $docScope
+						},
+						model: model
+					});
+
+					// Act
+					model[propertyName].val(false);
+
+					// Assert
+					ok($docScope.hasClass(extraClass));
+				});
+			});
+		});
+		
 		test('Given a model with an Observable property named "Value" and a view with an editable scope element / When input changes / Observable value is changed to match value of input', function () {
 			expect(1);
 

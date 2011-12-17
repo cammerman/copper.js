@@ -15,7 +15,7 @@ copper  = (function($, undefined) {
 		ModelPropertyBindPipeline,
 		Extender,
 		Conventions;
-		
+	
 	Extender = {
 		extend: function (target, source, preserveExisting) {
 			for (var prop in source) {
@@ -592,6 +592,10 @@ copper  = (function($, undefined) {
 					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
 						return true;
 					}
+				} else if (propertyName.indexOf('Is_') == 0) {
+					if (this._tryBindElementToObservableMode(view, $element, property, propertyName, propertyName.slice(3))) {
+						return true;
+					}
 				}
 
 				return false;
@@ -611,6 +615,29 @@ copper  = (function($, undefined) {
 						$element.attr('checked', newValue);
 					};
 				}
+
+				if (callback) {
+					view[newProperty] = callback;
+					property.subscribe(callback);
+					
+					return true;
+				}
+
+				return false;
+			},
+			
+			_tryBindElementToObservableMode: function (view, $element, property, propertyName, mode) {
+				var scope = this,
+					newProperty = propertyName + '_ModelChanged',
+					callback;
+					
+				callback = function (newValue) {
+					if (newValue) {
+						$element.addClass(mode);
+					} else {
+						$element.removeClass(mode);
+					}
+				};
 
 				if (callback) {
 					view[newProperty] = callback;
