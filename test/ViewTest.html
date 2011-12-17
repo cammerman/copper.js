@@ -28,6 +28,7 @@
 			<div id="subView">
 			</div>
 			<div id="modalElement"></div>
+			<input name="namedModalInput" type="text"></div>
 		</div>
 	</body>
 	<script>
@@ -689,6 +690,251 @@
 				});
 			});
 		});
+
+		var givenElementWithClass = function ($element, extraClass, continueTest) {
+			if (!$element.hasClass(extraClass)) {
+				$element.addClass(extraClass);
+			}
+			
+			continueTest();
+		};
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given classless HTML element with ID "X" / When observable becomes true / HTML element receives a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				copper.Bind({ model: model });
+
+				// Act
+				model[propertyName].val(true);
+
+				// Assert
+				ok($element.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given HTML element with ID "X" and class "Y" / When observable becomes false / HTML element loses a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenElementWithClass($element, mode, function () {
+				givenModelWithObservableProperty(propertyName, true, function (model) {
+					copper.Bind({ model: model });
+
+					// Act
+					model[propertyName].val(false);
+
+					// Assert
+					ok(!$element.hasClass(mode));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given HTML element with ID "X", class "Y", and other classes / When observable becomes false / HTML element does not lost classes other than "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				extraClass = 'something',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenElementWithClass($element, extraClass, function () {
+				givenElementWithClass($element, mode, function () {
+					givenModelWithObservableProperty(propertyName, true, function (model) {
+						copper.Bind({ model: model });
+
+						// Act
+						model[propertyName].val(false);
+
+						// Assert
+						ok($element.hasClass(extraClass));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given classless HTML input with name "X" / When observable becomes true / HTML input receives a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'namedModalInput',
+				$element = $('input[name="' + elementId + '"]'),
+				mode = 'Changed',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				copper.Bind({ model: model });
+
+				// Act
+				model[propertyName].val(true);
+
+				// Assert
+				ok($element.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given HTML input with name "X" and class "Y" / When observable becomes false / HTML input loses a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'namedModalInput',
+				$element = $('input[name="' + elementId + '"]'),
+				mode = 'Changed',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenElementWithClass($element, mode, function () {
+				givenModelWithObservableProperty(propertyName, true, function (model) {
+					copper.Bind({ model: model });
+
+					// Act
+					model[propertyName].val(false);
+
+					// Assert
+					ok(!$element.hasClass(mode));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given HTML input with name "X", class "Y", and other classes / When observable becomes false / HTML input does not lost classes other than "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'namedModalInput',
+				$element = $('input[name="' + elementId + '"]'),
+				mode = 'Changed',
+				extraClass = 'something',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenElementWithClass($element, extraClass, function () {
+				givenElementWithClass($element, mode, function () {
+					givenModelWithObservableProperty(propertyName, true, function (model) {
+						copper.Bind({ model: model });
+
+						// Act
+						model[propertyName].val(false);
+
+						// Assert
+						ok($element.hasClass(extraClass));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view selector hash entry with name of Observable property and value of an HTML element with name "X" / When observable becomes true / HTML input receives a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				selectorName = 'overreaction',
+				propertyName = selectorName + '_Is_' + mode,
+				selectors = {};
+
+			selectors[selectorName] = '#' + elementId;
+				
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				copper.Bind({
+					model: model,
+					view: {
+						selectorFor: selectors
+					}
+				});
+
+				// Act
+				model[propertyName].val(true);
+
+				// Assert
+				ok($element.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view selector hash entry with name of Observable property and value of an HTML element with name "X" and class "Y" / When observable becomes false / HTML input loses a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				selectorName = 'overreaction',
+				propertyName = selectorName + '_Is_' + mode,
+				selectors = {};
+
+			selectors[selectorName] = '#' + elementId;
+			
+			givenElementWithClass($element, mode, function () {
+				givenModelWithObservableProperty(propertyName, true, function (model) {
+					copper.Bind({
+						model: model,
+						view: {
+							selectorFor: selectors
+						}
+					});
+
+					// Act
+					model[propertyName].val(false);
+
+					// Assert
+					ok(!$element.hasClass(mode));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view selector hash entry with name of Observable property and value of an HTML element with class "Y", and other classes / When observable becomes false / HTML input does not lost classes other than "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				extraClass = 'something',
+				selectorName = 'overreaction',
+				propertyName = selectorName + '_Is_' + mode,
+				selectors = {};
+				
+			selectors[selectorName] = '#' + elementId;
+
+			givenElementWithClass($element, extraClass, function () {
+				givenElementWithClass($element, mode, function () {
+					givenModelWithObservableProperty(propertyName, true, function (model) {
+						copper.Bind({
+							model: model,
+							view: {
+								selectorFor: selectors
+							}
+						});
+
+						// Act
+						model[propertyName].val(false);
+
+						// Assert
+						ok($element.hasClass(extraClass));
+					});
+				});
+			});
+		});
 		
 		test('Given a model with an Observable property / Given a view selector hash entry with name of Observable property and value of an HTML element / When observable changes / Content of HTML element selected by hashed selector is changed to match observable value', function () {
 			expect(1);
@@ -781,7 +1027,7 @@
 			});
 		});
 		
-		test('Given a model with an Observable property with name the same ID as an input in the HTML / When obseravble changes / Input value is changed to match observable value', function () {
+		test('Given a model with an Observable property with name the same ID as an input in the HTML / When observable changes / Input value is changed to match observable value', function () {
 			expect(1);
 
 			// Arrange
@@ -803,6 +1049,8 @@
 				});
 			});
 		});
+		
+		
 		
 		test('Given a model with an Observable property with name the same as an input name in the HTML / When input changes / Observable value is changed to match value of input', function () {
 			expect(1);
@@ -881,6 +1129,37 @@
 			});
 		});
 		
+		test('Given a model with an Observable property named "Value" and a view with an editable scope element / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'Value',
+				elementId = 'dynamicInput',
+				$docScope = $('#' + elementId),
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(elementId, oldValue, function () {
+					copper.Bind({
+						view: {
+							$documentScope: $docScope
+						},
+						model: model
+					});
+					$docScope.val(newValue);
+
+					// Act
+					$docScope.trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
+		
 		test('Given a model with an Observable property named "Is_X" and a view with a classless scope element / When observable becomes true / HTML element receives a class of X', function () {
 			expect(1);
 
@@ -936,14 +1215,6 @@
 				});
 			});
 		});
-		
-		var givenElementWithClass = function ($element, extraClass, continueTest) {
-			if (!$element.hasClass(extraClass)) {
-				$element.addClass(extraClass);
-			}
-			
-			continueTest();
-		};
 
 		test('Given a model with an Observable property named "Is_X" and a view with a multi-classed scope element / When observable becomes false / HTML element does not lose non-X classes', function () {
 			expect(1);
@@ -956,52 +1227,23 @@
 				$docScope = $('#' + elementId),
 				initialValue = true,
 				extraClass = 'something';
-				
-			givenElementWithClass($docScope, extraClass, function() {
-				givenModelWithObservableProperty(propertyName, initialValue, function (model) {
-					copper.Bind({
-						view: {
-							$documentScope: $docScope
-						},
-						model: model
+			
+			givenElementWithClass($docScope, mode, function() {			
+				givenElementWithClass($docScope, extraClass, function() {
+					givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+						copper.Bind({
+							view: {
+								$documentScope: $docScope
+							},
+							model: model
+						});
+
+						// Act
+						model[propertyName].val(false);
+
+						// Assert
+						ok($docScope.hasClass(extraClass));
 					});
-
-					// Act
-					model[propertyName].val(false);
-
-					// Assert
-					ok($docScope.hasClass(extraClass));
-				});
-			});
-		});
-		
-		test('Given a model with an Observable property named "Value" and a view with an editable scope element / When input changes / Observable value is changed to match value of input', function () {
-			expect(1);
-
-			// Arrange
-			var called = false,
-				propertyName = 'Value',
-				elementId = 'dynamicInput',
-				$docScope = $('#' + elementId),
-				initialValue = 'blah',
-				oldValue = 'Something unremarkable',
-				newValue = 'Something super special and important.';
-
-			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
-				givenInputWithIdHasValue(elementId, oldValue, function () {
-					copper.Bind({
-						view: {
-							$documentScope: $docScope
-						},
-						model: model
-					});
-					$docScope.val(newValue);
-
-					// Act
-					$docScope.trigger('change');
-
-					// Assert
-					equal(model[propertyName].val(), newValue);
 				});
 			});
 		});
