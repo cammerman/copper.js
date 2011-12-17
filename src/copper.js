@@ -317,7 +317,7 @@ copper  = (function($, undefined) {
 
 			_findViewElement: function (view, id) {
 				return this._select(view, '#' + id);
-			},
+			}
 		};
 
 		return construct;
@@ -435,7 +435,7 @@ copper  = (function($, undefined) {
 					};
 				} else if (scope._isCheckable($element)) {
 					callback = function (newValue) {
-						$element.attr('checked', (newValue ? 'checked' : ''));
+						$element.attr('checked', newValue);
 					};
 				}
 
@@ -608,7 +608,7 @@ copper  = (function($, undefined) {
 					};
 				} else if (scope._isCheckable($element)) {
 					callback = function (newValue) {
-						$element.attr('checked', (newValue ? 'checked' : ''));
+						$element.attr('checked', newValue);
 					};
 				}
 
@@ -849,7 +849,7 @@ copper  = (function($, undefined) {
 							}
 						}
 					});
-			},
+			}
 		});
 		
 		return construct;
@@ -874,7 +874,7 @@ copper  = (function($, undefined) {
 						}
 					});
 				}
-			},
+			}
 		});
 		
 		return construct;
