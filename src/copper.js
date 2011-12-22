@@ -4,7 +4,7 @@
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
     Version 0.2.5
 */
-copper  = (function($, undefined) {
+Cu  = (function($, undefined) {
 	var Observable,
 		ObservableCollection,
 		EventHost,
@@ -1342,8 +1342,8 @@ copper  = (function($, undefined) {
 		return construct;
 	})();
 	
-	Bind = (function () {
-		var bind = function (params) {
+	Wire = (function () {
+		var wire = function (params) {
 			var view = params.view || {},
 				model = params.model || {},
 				bindingState = {
@@ -1353,12 +1353,12 @@ copper  = (function($, undefined) {
 				
 			view.selectorFor = view.selectorFor || {};
 				
-			_(bind.pipeline).forEach(function (step) {
+			_(wire.pipeline).forEach(function (step) {
 				step.tryBind(view, model, bindingState);
 			});
 		};
 		
-		bind.pipeline = [
+		wire.pipeline = [
 			new BindInputsByIdToViewHandlersStep(),
 			new BindInputsByNameToViewHandlersStep(),
 			new BindClickablesToViewHandlersStep(),
@@ -1370,7 +1370,7 @@ copper  = (function($, undefined) {
 			new BindModelDirectlyStep()
 		]
 		
-		return bind;
+		return wire;
 	})();
 	
 	return {
@@ -1379,7 +1379,7 @@ copper  = (function($, undefined) {
 		ObservableCollection: ObservableCollection,
 		SmartEvent: SmartEvent,
 		View: View,
-		Bind: Bind,
+		Wire: Wire,
 		BindPipelineStep: BindPipelineStep,
 		Conventions: Conventions
 	};
