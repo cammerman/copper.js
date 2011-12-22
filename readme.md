@@ -110,7 +110,7 @@ names.subscribe({
 When you create a new EventHost you pass in a set of event names. The EventHost will define events with these names, and offer subscription tracking and callback for these events.
 
 ```javascript
-var events = new Cu.EventHost('itemAdded', 'itemRemoved', 'collectionReplaced');
+var events = new Cu.EventHost(['itemAdded', 'itemRemoved', 'collectionReplaced']);
 // events now offers the same events as an ObservableCollection.
 
 var handler = function (newVal, atIndex) {
@@ -147,8 +147,8 @@ events.subscribe({
 Raising events on an EventHost works similarly to subscribing, but without support for bulk operations.
 
 ```javascript
-var events = new Cu.EventHost('something happened');
-events.subscribe('something happened', function(newVal, atIndex) {
+var events = new Cu.EventHost(['something happened']);
+events.subscribe('something happened', function() {
 		console.log('Something amazing has happened!');
 });
 
@@ -158,7 +158,7 @@ events.raise('something happened');
 Finally, you can unsubscribe all subscriptions on an EventHost without hanging onto references to all the registered functions, by making a single, simple function call.
 
 ```javascript
-var events = new Cu.EventHost('one', 'two', 'three');
+var events = new Cu.EventHost(['one', 'two', 'three']);
 events.subscribe({
 	one: function () { console.log('one!'); },
 	two: function () { console.log('two!'); },
