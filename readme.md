@@ -25,7 +25,9 @@ Accessing or changing an observable isn't quite as easy as changing a normal pro
 
 ```javascript
 var age = new Cu.Observable(29); // Initialize
+
 console.log(age.val()); // Get
+
 age.val(30); // Set
 ```
 
@@ -33,9 +35,11 @@ When you give an Observable a new value, it will call any subscriber callbacks t
 
 ```javascript
 var age = new Cu.Observable(29);
+
 age.subscribe(function(newVal) {
     console.log('Age was changed to ' + newVal);
 });
+
 age.val(30); // Callback will fire here.
 ```
 
@@ -49,7 +53,9 @@ ObservableCollection wraps an array object. It's important to note that it does 
 
 ```javascript
 var names = new Cu.ObservableCollection(['Chris', 'Joe', 'Mike']);
+
 names.add('Terry'); // Adds to the end.
+
 names.remove('Joe'); // Removes the first occurrence.
 // names.val() is now ['Chris', 'Mike', 'Terry']
 ```
@@ -58,7 +64,9 @@ It's also possible to add and remove at an index, simply by adding an index para
 
 ```javascript
 var names = new Cu.ObservableCollection(['Chris', 'Joe', 'Mike']);
+
 names.add('Terry', 1); // Adds to the end.
+
 names.removeAt(2); // Removes the first occurrence.
 // names.val() is now ['Chris', 'Terry', 'Mike']
 ```
@@ -70,9 +78,11 @@ var names = new Cu.ObservableCollection(['Chris', 'Joe', 'Mike']);
 names.subscribe('itemAdded', function(newVal, atIndex) {
 	console.log(newVal + ' was added at ' + atIndex);
 });
+
 names.subscribe('itemRemoved', function(removedVal, atIndex) {
 	console.log(removedVal + ' was removed from ' + atIndex);
 });
+
 names.subscribe('collectionReplaced', function(newVal) {
 	console.log('Array was replaced with a new one of length ' + newVal.length);
 });
@@ -102,11 +112,17 @@ When you create a new EventHost you pass in a set of event names. The EventHost 
 ```javascript
 var events = new Cu.EventHost('itemAdded', 'itemRemoved', 'collectionReplaced');
 // events now offers the same events as an ObservableCollection.
+
 var handler = function (newVal, atIndex) {
 	console.log(newVal + ' was added at ' + atIndex);
 };
+
 event.subscribe('itemAdded', handler);
 // Now listening.
+
+event.raise('itemAdded', 'x', 1);
+// Log: 'x was added at 1'
+
 event.unsubscribe('itemAdded', handler);
 // No longer listening.
 ```
@@ -135,6 +151,7 @@ var events = new Cu.EventHost('something happened');
 events.subscribe('something happened', function(newVal, atIndex) {
 		console.log('Something amazing has happened!');
 });
+
 events.raise('something happened');
 ```
 
@@ -149,10 +166,12 @@ events.subscribe({
 });
 events.raise('one');
 // Logged 'one!'
+
 events.release();
+
 events.raise('one');
 // Nothing happened.
 
-## Cu.Wire
+##Cu.Wire
 
 _Documentation on auto-wiring conventions coming soon..._
