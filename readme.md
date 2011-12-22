@@ -171,6 +171,7 @@ events.release();
 
 events.raise('one');
 // Nothing happened.
+```
 
 ##Cu.Wire
 
