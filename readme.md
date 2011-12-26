@@ -165,7 +165,7 @@ events.subscribe({
 	three: function () { console.log('three!'); }
 });
 events.raise('one');
-// Logged 'one!'
+// Logged 'one!'l
 
 events.release();
 
@@ -209,19 +209,408 @@ The default binding conventions offer serveral different modes of auto-binding. 
 * ViewModel function name
 * ViewModel property name
 
-Each of these can be auto-bound to any of the others, as described in the following sections.
+You can bind HTML to View, View to ViewModel, or even HTML straight through to ViewModel. The ideal auto-binding situation for Copper is when you don't have any special HTML handling to do in your event handlers. If all you need to do is sync data from your HTML to your Javascript objects and pop alerts or do redirects in response to clicking, you can avoid writing a View altogether by using a few strategic conventions. One important feature of Copper is that even in this situation, it supports/enforces proper separation of concerns. If you pass in a view object--even an empty one like ```{}```--Copper will add intermediate functions to the view, to provide indirection between the HTML and the ViewModel. If you pass no View at all, this still occurs. Copper will just create its own implicit View. In a future release, this implicit View will be made accessible to your code after the binding completes.
 
-#### Binding by Element ID
+### Bind a ViewModel callback to a clickable HTML element
 
-There are a few different ways you bind based on an element ID. If you have special DOM-related logic that needs to happen, you can bind the DOM to the View by creating a function with a particular name on your view object. The function name will be different depending on what type of element and action you want to bind to.
+Copper will automatically bind a clickable HTML element's click callback to a method on your ViewModel, if that method has the same name as the ID of the element.
 
-* To bind to a click event on an element with ID ```Button1```, create a function on your View called ```Button1_Clicked```.
-* To bind to the change event of an input element with ID ```Text1```, create a function on your View called ```Text1_ViewChanged```.
-* To bind to state check state change of a checkbox or radio element with ID ```Check1```, create a function on your View called ```Check1_ViewChanged```.
+Given this HTML:
 
-You can also bind straight through to the Model, if you don't need any special DOM handling. If you do this, the intermediate View functions will be created automatically.
+```html
+<span>Click one of these to see a message.</span>
+<a id="alertLink" href="#">A link</a>
+<button id="alertButton">A button</button>
+<input id="alertInputButton" type="button">An input button</input>
+<input id="alertInputSubmit" type="submit">A submit button</input>
+<input id="alertInputReset" type="reset">A reset button</input>
+```
 
-* To bind to a click event on an element with ID ```Button1```, create a function on your ViewModel called ```Button1```.
-* To bind the value of an input element with ID ```Input1``` to a data property of your ViewModel, create an Observable property on your ViewModel called ```Input1```.
+Bind to all the buttons using this Javascript:
 
-__Further binding documentation is in the works__
+```javascript
+var view = {};
+
+Cu.Wire({
+	view: view,
+	model: {
+		alertLink: function () { alert('Link clicked.'); },
+		alertButton: function () { alert('Button clicked.'); },
+		alertInputButton: function () { alert('Input button clicked.'); },
+		alertInputSubmit: function () { alert('Input submit clicked.'); },
+		alertInputReset: function () { alert('Input reset clicked.'); }
+	}
+});
+```
+
+When the above code finishes executing, the ```view``` object will have the functions below added to it. These methods are registered with the HTML, and invoke your ViewModel callbacks.
+
+* ```alertLink_Clicked```
+* ```alertButton_Clicked```
+* ```alertInputButton_Clicked```
+* ```alertInputSubmit_Clicked```
+* ```alertInputReset_Clicked```
+
+You can also bind specifically to the callbacks of input elements by their name attribute in this same way. Copper will attempt to bind by ID first, but if it doesn't find an appropriate binding this way it will look at the name attribute.
+
+Given this HTML:
+
+```html
+<input name="alertButton" type="button">An input button</input>
+```
+
+Bind to the button using this Javascript:
+
+```javascript
+var view = {};
+
+Cu.Wire({
+	view: view,
+	model: {
+		alertButton: function () { alert('Input button clicked.'); }
+	}
+});
+```
+
+When the above code finishes executing, the ```view``` object will have the intermediary function ```alertButton_Clicked``` added to it.
+
+A couple of things to note about this auto-binding:
+
+1. Copper will automatically call ```preventDefault``` on the event argument for a link or submit button, so you don't have to do so.
+2. Copper will currently only bind click events of elements that are inherently "clickable", such as those listed in the first example. A future release will support binding click events for any element.
+
+### Bind an Observable ViewModel property to HTML content
+
+Copper will automatically bind an Observable property on your ViewModel to the content of an HTML element, if the property has the same name as the ID of the element. Once the binding is made, any time you change the value of the observable, the value in the element will be changed to match.
+
+Given this HTML:
+
+```html
+<span id="errorMessage"></span>
+```
+
+Bind the content using this Javascript:
+
+```javascript
+var view = {};
+
+Cu.Wire({
+	view: view,
+	model: {
+		errorMessage: new Observable('')
+	}
+});
+```
+
+When the above code finishes executing, the ```view``` object will have the intermediary function ```errorMessage_ModelChanged``` added to it. This callback is registered with the Observable, and sets the content of the span element to be the value of the Observable.
+
+### Bind an Observable ViewModel property to an input element value
+
+Copper will automatically bind an Observable property on your ViewModel to the value of an HTML input element, if the property has a name the same as the ID or name attribute of the element. Once the binding is made, any time you change the value of the observable, the value in the element will be changed to match. Copper will even check if an input element is of a checkbox or radio type, to correctly bind to the presence or absence of the ```checked``` attribute instead of the value itself.
+
+Given this HTML:
+
+```html
+<input id="firstName" type="text"></input>
+<input name="lastName" type="text"></input>
+<input name="optIn" type="checkbox"></input>
+```
+
+Bind the input values using this Javascript:
+
+```javascript
+var view = {};
+
+Cu.Wire({
+	view: view,
+	model: {
+		firstName: new Observable(''),
+		lastName: new Observable(''),
+		optIn: new Observable(false)
+	}
+});
+```
+
+When the above code finishes executing, the ```view``` object will have the intermediary functions below added to it. Note now that there is one for each element going in each direction, because this is a two-way binding convention.
+
+* ```firstName_ModelChanged```
+* ```firstName_ViewChanged```
+* ```lastName_ModelChanged```
+* ```lastName_ViewChanged```
+* ```optIn_ModelChanged```
+* ```optIn_ViewChanged```
+
+### Bind explicit View functions to HTML
+
+Instead of letting Copper bind straight through from HTML to ViewModel, you can put explicit handler functions on your View and let Copper bind your HTML to those. Simply follow the naming conventions below. These are the same conventions that Copper will use when generating implicit handlers on your View object. In short, take the ID or name attribute of the desired HTML element, and add ```_Clicked``` for a click handler or ```_ViewChanged``` for an input value change handler.
+
+Given this HTML:
+
+```html
+<span>Click one of these to see a message.</span>
+<a id="alertLink" href="#">A link</a>
+<button id="alertButton">A button</button>
+<input id="alertInputButton" type="button">An input button</input>
+<input id="alertInputSubmit" type="submit">A submit button</input>
+<input id="alertInputReset" type="reset">A reset button</input>
+<input id="firstName" type="text"></input>
+<input name="lastName" type="text"></input>
+<input name="optIn" type="checkbox"></input>
+```
+
+Bind using this Javascript:
+
+```javascript
+Cu.Wire({
+	view: {
+		alertLink_Clicked: function () { alert('Link clicked.'); },
+		alertButton_Clicked: function () { alert('Button clicked.'); },
+		alertInputButton_Clicked: function () { alert('Input button clicked.'); },
+		alertInputSubmit_Clicked: function () { alert('Input submit clicked.'); },
+		alertInputReset_Clicked: function () { alert('Input reset clicked.'); },
+		firstName_ViewChanged: function (newValue) {
+			alert('firstName was changed to ' + newValue.toString());
+		},
+		lastName_ViewChanged: function (newValue) {
+			alert('firstName was changed to ' + newValue.toString());
+		},
+		optIn_ViewChanged: function (newValue) {
+			alert('firstName was changed to ' + newValue.toString());
+		}
+	}
+});
+```
+
+Note that the handlers for the input element change events take an argument containing the new value of the element which you can use.
+
+### Bind explicit View functions to the ViewModel
+
+Instead of letting Copper bind straight through from HTML to ViewModel, you can put explicit handler functions on your View and let Copper bind your ViewModel to those. Simply follow the naming conventions below. These are the same conventions that Copper will use when generating implicit handlers on your View object. In short, take the name of the desired Observable property and add ```_ModelChanged```.
+
+Example:
+
+```javascript
+Cu.Wire({
+	model: {
+		firstName: new Observable(''),
+		lastName: new Observable(''),
+		optIn: new Observable(false),
+	},
+	view: {
+		firstName_ModelChanged: function (newValue) {
+			alert('firstName in the ViewModel was changed to ' + newValue.toString());
+		},
+		lastName_ModelChanged: function (newValue) {
+			alert('firstName in the ViewModel was changed to ' + newValue.toString());
+		},
+		optIn_ModelChanged: function (newValue) {
+			alert('firstName in the ViewModel was changed to ' + newValue.toString());
+		}
+	}
+});
+```
+
+Note that the handlers are just plain old Observable change event handlers, taking an argument containing the new value of the Observable which you can use.
+
+### Manual binding hook
+
+If you have some custom binding to do between your View and ViewModel, you can easily hook in at the end of the auto-binding process to receive the ViewModel object and do what you need to with it. When autobinding, Copper looks for a function on your View object called ```bindModel``` which is intended to take the ViewModel as an argument and store it in a field on the View. If none is provided, Copper will create one itself. If you include a ```bindModel``` method on your view, you take responsibility for storing the reference to the ViewModel, and have the opporutunity to do any last-minute manual binding or boookkeeping you desire. This most cleanly implemented when you have defined a View prototype ahead of time, so that you can make use of ```this```.
+
+Example:
+```javascript
+var viewModel = {
+	firstName: new Observable('')
+};
+	
+var View = function() {
+	this.prototype = {
+		bindModel: function (viewModel) {
+			this._model = viewModel;
+			this._model.firstName.subscribe(function(newValue) {
+				$('#givenName').val(newValue);
+			});
+		}
+	};
+};
+
+Cu.Wire({
+	model: viewModel,
+	view: new View()
+});
+```
+
+### Partial Views and Sub-Views with view scoping
+
+If you decide that you want to use Copper to bind only a portion of your page, of if you want to compartmentalize your page into many smaller, simpler pieces with well-defined relationships, you can make use of Copper's support for view scoping to limit binding to occur within a subset of the DOM. All you need to do is provide a property on your View called ```$documentScope```, which contains a jQuery object identifying the scope of your view. When you do this, Copper will only bind within the elements specified by the ```$documentScope``` object. Note that the jQuery object could be a collection, not just a single element. If your handling need not distinguish between multiple identical parts of your page, just use a jQuery collection containing all of them.
+
+Given the following HTML:
+
+```html
+<input id="trigger" type="button">Click Me</input>
+<div id="container">
+	<input id="name" type="text"></input>
+</div>
+```
+
+Bind to the text box, but not the button, using this Javascript
+
+```javascript
+Cu.Wire({
+	view: {
+		$documentScope: $('#container'),
+		trigger_Clicked: function() { alert('The button was clicked.'); },
+		name_ViewChanged: function(newValue) { alert('The name was changed to ' + newValue); }
+	}
+});
+```
+
+After this code runs, if you click the button, nothing will happen. But after changing the name textbox, you will see an alert.
+
+### View scope binding
+
+If you find it useful at some point to use a micro-view for scope consisting solely of a series of buttons or input elements, it probably won't work to use IDs or names for binding. In this case, Copper provides a set of alternate conventions which will let you bind directly to the scope element itself, rather than a child of it. They work similarly to the other click and input change conventions, just with simpler property names.
+
+Given the following HTML:
+
+```html
+<input id="trigger" type="button">Click Me</input>
+```
+
+Bind the button click, using this Javascript:
+
+```javascript
+Cu.Wire({
+	view: {
+		$documentScope: $('#trigger'),
+		Clicked: function() { alert('The button was clicked.'); },
+	}
+});
+```
+
+Or to bind through to the ViewModel, use this Javascript:
+
+```javascript
+Cu.Wire({
+	view: {
+		$documentScope: $('#trigger')
+	},
+	model: {
+		Click: function() { alert('The button was clicked.'); },
+	}
+});
+```
+
+Given the following HTML:
+
+```html
+<input id="firstName" type="text">/input>
+```
+
+Bind the value change event using this Javascript:
+
+```javascript
+Cu.Wire({
+	view: {
+		$documentScope: $('#firstName'),
+		Value_Changed: function(newValue) { alert('The first name was set to ' + newValue.toString()); },
+	}
+});
+```
+
+Or to bind through to an Observable on the ViewModel, use this Javascript:
+
+```javascript
+Cu.Wire({
+	view: {
+		$documentScope: $('#firstName')
+	},
+	model: {
+		Value: new Observable(''),
+	}
+});
+```
+
+### Selector-based binding
+
+As stated in the beginning, Copper is built to help keeping your HTML and your ViewModel clean. Copper can help keep data out of your HTML attributes even in a table or list scenario where we might be tempted to add a ```data-``` to keep track of a domain model ID or something else we don't want displayed. It is probably clear by now that the first step to achieving this is to use scoping and micro-Views. But what if you have an ```ol``` and each ```li``` in it needs its own edit link? In the past you might have had one global handler and pulled the related ID out of an attribute. Or you'd have used generated ID attributes to identify one ```li``` from another. Or maybe you'd have hashed the IDs by their DOM or jQuery objects. With Copper, none of this is necessary. Once you've set up a document scope, just use a selector directive to indicate how to bind an Observable or click handler on your ViewModel to the DOM.
+
+Say you have list populated via AJAX, and each item must contain a link which triggers a modal where you can edit the item's data. You might set that up with the HTML and script below. Note that this will work for input elements as well.
+
+```html
+<ul id="itemList"></ul>
+```
+
+```javascript
+var itemData = retrieveItemsFromServer(); // Retrieve item data via AJAX.
+var $list = $('#itemList');
+var item = null;
+
+for (int i = 0; i < itemData.length; ++i) {
+	item = itemData[i];
+	
+	var ViewModel = {
+		id: item.id,
+		name: new Observable(item.name);
+	};
+	
+	// Add a list item to the list dynamically
+	var $item = $('<li><a class="editLink" href="#">' + item.name + '</a></li>');
+	$list.append($item);
+	
+	Cu.Wire({
+		view: {
+			$documentScope: $item // Establish scope to be an individual list item
+			selectorFor: {
+				'edit' : 'a.editLink'
+			}
+		},
+		model: {
+			edit: function() {
+				showEditModal(item);
+			}
+		}
+	});
+}
+```
+
+If you have other behavior on the page that you want to auto-bind, you might do the above work in the ```bindModel``` function of your page-level View. You might also consider using an ObservableCollection of item data or even item ViewModels to make this a bit less procedural. In a future release, I plan to provide autobinding to take care of infrastructure like this, and that will itself likely capitalize on ObservableCollection.
+
+### Binding to the class attribute
+
+Another simple permutation of the naming conventions can be used to bind ViewModel Observables to the class attribute of an element. You do this by establishing a series of boolean Observable properties representing the presence or absence of the class. Consider them to be "mode indicators" on your ViewModel. The naming follows a slightly different pattern in that in addition to the element's ID or name attribute value, the property name must also contain the class. The pattern for this is 'IdOrName_Is_Class'.
+
+Given this HTML:
+
+```html
+<div id="userForm" class="">
+	
+</div>
+```
+
+Auto-bind an "invalid" class using this Javascript
+
+```javascript
+var viewModel = {
+	userForm_Is_invalid: new Observable(false)
+};
+
+Cu.Wire({
+	model: viewModel
+});
+
+viewModel.userForm_Is_invalid.val(true); // Adds the "invalid" class to the div.
+viewModel.userForm_Is_invalid.val(false); // Removes the "invalid" class to the div.
+```
+
+## Future Auto-Binding Features
+
+There are a number of features I plan to add to Copper in future releases. Generally they are all entered in the Issues list, but a few highlights include:
+
+* Auto-bind the ```disabled``` attribute of input elements.
+* Auto-bind ```ul```, ```ol```, and ```select``` children to an ObservableCollection
+* Auto-bind any element repetition to an ObservableCollection
+* Self-rendering views and template-based support for same.
+* Generate a simple ViewModel "bag of observables" from a hash of initial values.
+* Auto-initialization in either direction: from HTML to ViewModel, or from ViewModel to HTML.
+
+_Stay tuned!_
