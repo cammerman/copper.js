@@ -173,6 +173,55 @@ events.raise('one');
 // Nothing happened.
 ```
 
-##Cu.Wire
+##Auto-Binding with Cu.Wire
 
-_Documentation on auto-wiring conventions coming soon..._
+The ```Wire``` function on the ```Cu``` API object is the entry point for Copper's auto-binding functionality. It takes one argument object with two properties, and yields no return values. Each of the properties on the argument object is optional. But with the default conventions, if you leave both off at the same time you will get no bindings.
+
+The two argument properties are named ```view``` and ```model```. Each is expected to be either null/undefined, or to be an object. Each will be examined for their properties and functions by the binding pipeline to determine which conventions apply.
+
+```javascript
+var myView = /* ... */
+var myViewModel = /* ... */
+
+Cu.Wire({
+	view: myView,
+	model: myViewModel
+});
+```
+
+This method is designed with an MVVM structure in mind, and the default conventions all work toward the end of creating a clear delineation between your View and your ViewModel.
+
+Copper's default conventions support a 3-layer structure consisting of the following:
+
+* ViewModel -- The ViewModel contains the authoritative state of your UI. Rather than extracting data from HTML attributes in order to make decisions, Copper is designed to enable you to keep your application state pure, as data of appropriate types in "plain old" Javascript objects.
+* View -- The View acts as a proxy for the DOM. It watches the ViewModel's state and manipulates DOM elements to reflect that state appropriately. It also hooks into the DOM's events so that it can alter the state of the ViewModel in response to user actions.
+* The DOM itself -- Hopefully this is self-explanatory. =)
+
+Copper has no accounting for the domain Model layer, as this will be highly application-specific. It is recommended that you add your own Model and Service layers to this as well. Or you can change this core structure to an extent by replacing the default binding conventions.
+
+### Auto-Binding Hooks
+
+The default binding conventions offer serveral different modes of auto-binding. Each mode keys on a naming convention of some part of the structure outlined above. Here are the different things that the auto-binder can key on:
+
+* HTML element ID attribute
+* HTML input name attribute
+* View function name
+* ViewModel function name
+* ViewModel property name
+
+Each of these can be auto-bound to any of the others, as described in the following sections.
+
+#### Binding by Element ID
+
+There are a few different ways you bind based on an element ID. If you have special DOM-related logic that needs to happen, you can bind the DOM to the View by creating a function with a particular name on your view object. The function name will be different depending on what type of element and action you want to bind to.
+
+* To bind to a click event on an element with ID ```Button1```, create a function on your View called ```Button1_Clicked```.
+* To bind to the change event of an input element with ID ```Text1```, create a function on your View called ```Text1_ViewChanged```.
+* To bind to state check state change of a checkbox or radio element with ID ```Check1```, create a function on your View called ```Check1_ViewChanged```.
+
+You can also bind straight through to the Model, if you don't need any special DOM handling. If you do this, the intermediate View functions will be created automatically.
+
+* To bind to a click event on an element with ID ```Button1```, create a function on your ViewModel called ```Button1```.
+* To bind the value of an input element with ID ```Input1``` to a data property of your ViewModel, create an Observable property on your ViewModel called ```Input1```.
+
+__Further binding documentation is in the works__
