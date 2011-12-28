@@ -93,13 +93,13 @@ If you need to subscribe to multiple events, ObservableCollection also provides 
 ```javascript
 var names = new Cu.ObservableCollection(['Chris', 'Joe', 'Mike']);
 names.subscribe({
-	'itemAdded': function(newVal, atIndex) {
+	itemAdded: function(newVal, atIndex) {
 		console.log(newVal + ' was added at ' + atIndex);
 	},
-	'itemRemoved': function(removedVal, atIndex) {
+	itemRemoved: function(removedVal, atIndex) {
 		console.log(removedVal + ' was removed from ' + atIndex);
 	},
-	'collectionReplaced': function(newVal) {
+	collectionReplaced: function(newVal) {
 		console.log('Array was replaced with a new one of length ' + newVal.length);
 	}
 });
@@ -132,13 +132,13 @@ With an EventHost you can bulk subscribe to multiple events at the same time usi
 ```javascript
 var events = new Cu.EventHost(['itemAdded', 'itemRemoved', 'collectionReplaced']);
 events.subscribe({
-	'itemAdded': function(newVal, atIndex) {
+	itemAdded: function(newVal, atIndex) {
 		console.log(newVal + ' was added at ' + atIndex);
 	},
-	'itemRemoved': function(removedVal, atIndex) {
+	itemRemoved: function(removedVal, atIndex) {
 		console.log(removedVal + ' was removed from ' + atIndex);
 	},
-	'collectionReplaced': function(newVal) {
+	collectionReplaced: function(newVal) {
 		console.log('Array was replaced with a new one of length ' + newVal.length);
 	}
 });
