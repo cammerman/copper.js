@@ -47,6 +47,9 @@ Observable can hold any type of object you want. But it will only raise an event
 
 You can also store arrays in an Observable, but the event will only fire when the whole array is replaced. If you need to know when items are added or removed, you can use an ObservableCollection.
 
+##Computed
+_...Documentation coming soon..._
+
 ##ObservableCollection
 
 ObservableCollection wraps an array object. It's important to note that it does not derive from Array itself. You can access the array directly by using the ```val``` function as you would with a regular Observable. To add or remove value from the list, simply call the ```add``` or ```remove``` function.

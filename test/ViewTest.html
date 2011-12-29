@@ -138,6 +138,140 @@
 			ok(!handler1Called && !handler2Called);
 		});
 		
+		var givenObservableWithInitialValue = function(initialValue, continueTest) {
+			continueTest(new Cu.Observable(initialValue));
+		};
+		
+		test('Given a simple Observable, and given an observable dependent on it, when simple observable value changes, handlers of dependent observable are called with dependent value.', function () {
+			
+			givenObservableWithInitialValue('SomethingSomething', function (simpleObservable) {
+				var replacementValue = 'SomethingNew',
+					transformation = 'SomethingExtra',
+					storedByHandler = undefined,
+					dependent;
+					
+				dependent = simpleObservable.as(function (newValue) {
+					return newValue + transformation;
+				});
+
+				dependent.subscribe(function (newValue) {
+					storedByHandler = newValue;
+				});
+			
+				simpleObservable.val(replacementValue);
+
+				equal(storedByHandler, replacementValue + transformation);
+			});
+		});
+		
+		test('Given a simple Observable, and given an conditional observable dependent on it, when simple observable value change matches condition, handlers of dependent observable are called with new value.', function () {
+			
+			givenObservableWithInitialValue('SomethingSomething', function (simpleObservable) {
+				var replacementValue = 'SomethingNew',
+					storedByHandler = undefined,
+					dependent;
+					
+				dependent = simpleObservable.when(function (newValue) {
+					return newValue.length > 0;
+				});
+
+				dependent.subscribe(function (newValue) {
+					storedByHandler = newValue;
+				});
+			
+				simpleObservable.val(replacementValue);
+
+				equal(storedByHandler, replacementValue);
+			});
+		});
+		
+		test('Given a simple Observable, and given an conditional observable dependent on it, when simple observable value change does not match condition, handlers of dependent observable are not called.', function () {
+			
+			givenObservableWithInitialValue('SomethingSomething', function (simpleObservable) {
+				var replacementValue = 'SomethingNew',
+					handlerCalled = false,
+					dependent;
+					
+				dependent = simpleObservable.when(function (newValue) {
+					return newValue.length == 0;
+				});
+
+				dependent.subscribe(function (newValue) {
+					handlerCalled = true;
+				});
+			
+				simpleObservable.val(replacementValue);
+
+				ok(!handlerCalled);
+			});
+		});
+		
+		test('Given a simple Observable, and given chain dependent on it, when simple observable value change matches conditions, handlers of dependent observable are called with result of chain.', function () {
+			
+			givenObservableWithInitialValue(5, function (simpleObservable) {
+				var replacementValue = 6,
+					handlerCalled = false,
+					transformation1 = function (newValue) {
+						return newValue * 2;
+					},
+					transformation2 = function (newValue) {
+						return newValue * 2;
+					},
+					storedByHandler = undefined,
+					dependent;
+					
+				dependent = simpleObservable.when(function (newValue) {
+					return (newValue.length % 2) != 1;
+				}).as(transformation1).when(function (newValue) {
+					return newValue > 10;
+				}).as(transformation2);
+
+				dependent.subscribe(function (newValue) {
+					storedByHandler = newValue;
+				});
+			
+				simpleObservable.val(replacementValue);
+
+				equal(storedByHandler, transformation2(transformation2(replacementValue)));
+			});
+		});
+		
+		test('Given two simple Observables, and given a Computed dependent on both, when eacg simple observable value is changed, handlers of dependent observable are called with result of transformation.', function () {
+			var initialValue1 = 5,
+				initialValue2 = 10;
+			
+			givenObservableWithInitialValue(initialValue1, function (simpleObservable1) {
+				givenObservableWithInitialValue(initialValue2, function (simpleObservable2) {
+					var replacementValue1 = 6,
+						replacementValue2 = 11,
+						storedByHandler = undefined,
+						transformation = function () {
+							return simpleObservable1.val() + simpleObservable2.val();
+						},
+						dependent;
+						
+					dependent = new Cu.Computed({
+						from: [simpleObservable1, simpleObservable2],
+						as: transformation
+					});
+					
+					dependent.subscribe(function (newValue) {
+						storedByHandler = newValue;
+					});
+				
+					equal(dependent.val(), transformation());
+				
+					simpleObservable1.val(replacementValue1);
+
+					equal(storedByHandler, transformation());
+					
+					simpleObservable2.val(replacementValue1);
+
+					equal(storedByHandler, transformation());
+				});
+			});
+		});
+		
 		module('ObservableCollection');
 
 		test('Given no initial value, when constructed, accessor yields empty array.', function () {

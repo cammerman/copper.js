@@ -2,10 +2,11 @@
     copper.js
     Author: Chris Ammerman
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
-    Version 0.2.5
+    Version 0.5
 */
 Cu  = (function($, undefined) {
 	var Observable,
+		Computed,
 		ObservableCollection,
 		EventHost,
 		SmartEvent,
@@ -52,9 +53,7 @@ Cu  = (function($, undefined) {
 	};
 
 	SmartEvent = (function () {
-		var construct;
-
-		construct = function (name) {
+		var construct = function (name) {
 			this.name = name;
 			this.handlers = [];
 		};
@@ -86,7 +85,7 @@ Cu  = (function($, undefined) {
 	})();
 
 	EventHost = (function () {
-		construct = function (eventNames) {
+		var construct = function (eventNames) {
 			var scope = this;
 
 			scope._events = {};
@@ -158,7 +157,7 @@ Cu  = (function($, undefined) {
 	})();
 
 	Observable = (function () {
-		construct = function (newValue) {
+		var construct = function (newValue) {
 			this._subscriptions = this._subscriptions || [];
 			this._value = (newValue == undefined) ? null : newValue;
 		};
@@ -174,6 +173,7 @@ Cu  = (function($, undefined) {
 					}
 				}
 			},
+			
 			subscribe: function (handler) {
 				this._subscriptions.push(handler);
 			},
@@ -192,14 +192,90 @@ Cu  = (function($, undefined) {
 				_(this._subscriptions).forEach(function (handler) {
 					handler(newValue);
 				});
+			},
+			
+			as: function (transform) {
+				var dependent = new Computed({
+					from: this,
+					as: transform
+				});
+				
+				return dependent;
+			},
+			
+			when: function (filter) {
+				var dependent = new Computed({
+					from: this,
+					when: filter
+				});
+				
+				return dependent;
 			}
 		};
 
 		return construct;
 	})();
+	
+	Computed = (function () {
+		
+		var construct = function (init) {
+			var scope = this;
+			
+			Observable.call(scope);
+			
+			if (init.from instanceof Array) {
+				scope._dependentOn = init.from;
+			} else {
+				scope._dependentOn = [init.from];
+			}
+			
+			_(scope._dependentOn).forEach(function (source) {
+				source.subscribe(function (newValue) {
+					// Only pass the value through if this is the sole source for the computation.
+					scope._listen((scope._dependentOn.length == 1) ? newValue : undefined);
+				});
+			});
+			
+			scope._when = init.when || function() { return true; };
+			scope._transform = init.as || function(newValue) { return newValue; };
+			
+			scope._syncValue();
+		};
+		
+		construct.prototype = Extender.extendPrototype(Observable, {
+			_listen: function (newValue) {
+				if (this._when(newValue)) {
+					this._syncValue(newValue);
+					this._notify(this._value);
+				}
+			},
+			
+			_syncValue: function (newValue) {
+				this._value = this._transform(newValue);
+			},
+			
+			dependentOn: function (reference) {
+				var scope = this;
+				
+				if (reference === undefined) {
+					return _.clone(scope._dependentOn);
+				} else {
+					return _(scope._dependentOn).any(function (dependency) {
+						return (dependency == scope) || (dependency instanceof Computed && dependency.dependentOn(scope));
+					});
+				}
+			},
+			
+			val: function () {
+				return this._value;
+			}
+		});
+		
+		return construct;
+	})();
 
 	ObservableCollection = (function () {
-		construct = function (initialValue) {
+		var construct = function (initialValue) {
 			EventHost.call(this, ['collectionReplaced', 'itemAdded', 'itemRemoved']);
 
 			if (initialValue instanceof Array) {
@@ -1376,6 +1452,7 @@ Cu  = (function($, undefined) {
 	return {
 		Extender: Extender,
 		Observable: Observable,
+		Computed: Computed,
 		ObservableCollection: ObservableCollection,
 		SmartEvent: SmartEvent,
 		View: View,
