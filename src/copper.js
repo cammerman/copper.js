@@ -307,16 +307,20 @@ Cu  = (function($, undefined) {
 				return $element.is(Conventions.checkableSelector);
 			},
 
-			_select: function (view, selector) {
-				if (view.$documentScope) {
-					return view.$documentScope.find(selector);
-				} else {
-					return $(selector);
+			_select: function ($scope, selector) {
+				if (selector === undefined) {
+					return undefined;
 				}
+
+				if ($scope) {
+					return $scope.find(selector).add($scope.filter(selector))
+				}
+
+				return $(selector);
 			},
 
 			_findViewElement: function (view, id) {
-				return this._select(view, '#' + id);
+				return this._select(view.$documentScope, '#' + id);
 			}
 		};
 
@@ -458,8 +462,7 @@ Cu  = (function($, undefined) {
 		construct.prototype = new BindModelObservablePropertyToInput({
 		
 			_findBindableElement: function (view, propertyName) {
-				var selector = view.selectorFor[propertyName];
-				return (selector == undefined) ? undefined : this._select(view, selector);
+				return this._select(view.$documentScope, view.selectorFor[propertyName]);
 			}
 		});
 		
@@ -485,7 +488,7 @@ Cu  = (function($, undefined) {
 		construct.prototype = new BindModelObservablePropertyToInput({
 		
 			_findBindableElement: function (view, propertyName) {
-				return this._select(view, 'input[name="' + propertyName + '"]');
+				return this._select(view.$documentScope, 'input[name="' + propertyName + '"]');
 			}
 		});
 		
@@ -574,8 +577,7 @@ Cu  = (function($, undefined) {
 		construct.prototype = new BindModelObservablePropertyToClass({
 		
 			_findBindableElement: function (view, propertyNameId) {
-				var selector = view.selectorFor[propertyNameId];
-				return (selector == undefined) ? undefined : this._select(view, selector);
+				return this._select(view.$documentScope, view.selectorFor[propertyNameId]);
 			}
 		});
 		
@@ -601,7 +603,7 @@ Cu  = (function($, undefined) {
 		construct.prototype = new BindModelObservablePropertyToClass({
 		
 			_findBindableElement: function (view, propertyNameId) {
-				return this._select(view, 'input[name="' + propertyNameId + '"]');
+				return this._select(view.$documentScope, 'input[name="' + propertyNameId + '"]');
 			}
 		});
 		
@@ -679,8 +681,7 @@ Cu  = (function($, undefined) {
 		
 		construct.prototype = new BindModelObservablePropertyToContent({
 			_findBindableElement: function (view, propertyName) {
-				var selector = view.selectorFor[propertyName];
-				return (selector == undefined) ? undefined : this._select(view, selector);
+				return this._select(view.$documentScope, view.selectorFor[propertyName]);
 			}
 		});
 		
@@ -877,8 +878,7 @@ Cu  = (function($, undefined) {
 		
 		construct.prototype = new BindModelFunctionPropertyToClickable({
 			_findBindableElement: function (view, propertyName) {
-				var selector = view.selectorFor[propertyName];
-				return (selector == undefined) ? undefined : this._select(view, selector);
+				return this._select(view.$documentScope, view.selectorFor[propertyName]);
 			}
 		});
 		
@@ -987,7 +987,7 @@ Cu  = (function($, undefined) {
 				var scope = this,
 					propertyName;
 				
-				_(scope._select(view, scope._selector))
+				_(scope._select(view.$documentScope, scope._selector))
 					.forEach(function (element) {
 						var $el = $(element);
 						

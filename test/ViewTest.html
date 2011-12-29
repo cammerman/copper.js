@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html dir="ltr" lang="en-US">
 	<head>
-		<title>JS Infrastructure Tests - View</title>
+		<title>copper.js Tests</title>
 		<link href="../ext/qunit.css" rel="stylesheet" type="text/css" />
 
 		<script src="../ext/jquery-1.7.1.min.js" type="text/javascript"></script>
@@ -10,7 +10,7 @@
 		<script src="../src/copper.js" type="text/javascript"></script>
 	</head>
 	<body>
-		<h1 id="qunit-header">JS Infrastructure Tests - View</h1>
+		<h1 id="qunit-header">copper.js Tests</h1>
 		<h2 id="qunit-banner"></h2>
 		<div id="qunit-testrunner-toolbar"></div>
 		<h2 id="qunit-userAgent"></h2>
@@ -25,7 +25,9 @@
 			<p id="dynamicClass"></p>
 			<input id="dynamicInput" type="text" />
 			<input name="namedInput" type="text" />
-			<div id="subView">
+			<div id="subView"></div>
+			<div id="subView2">
+				<input id="compoundScopedInput" type="text" />
 			</div>
 			<div id="modalElement"></div>
 			<input name="namedModalInput" type="text"></div>
@@ -1269,7 +1271,7 @@
 		});
 
 		// Test HTML scoping.
-		test('Given a model with an Observable property with name the same ID as an input outside the scope / When input changes / Observable value does not change', function () {
+		test('Given a model with an Observable property with name the same as an ID of an input outside the scope / When input changes / Observable value does not change', function () {
 			expect(1);
 
 			// Arrange
@@ -1298,7 +1300,69 @@
 				});
 			});
 		});
+		
+		// Test HTML scoping.
+		test('Given a model with an Observable property with name the same as an ID of an input outside the compound scopes / When input changes / Observable value does not change', function () {
+			expect(1);
 
+			// Arrange
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					Cu.Wire({
+						model: model,
+						view: {
+							$documentScope: $('#subView').add($('#subView2'))
+						}
+					});
+
+					$('#' + propertyName).val(newValue);
+
+					// Act
+					$('#' + propertyName).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), initialValue);
+				});
+			});
+		});
+
+		// Test HTML scoping.
+		test('Given a model with an Observable property with name the same as an ID of an input inside the compound scopes / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'compoundScopedInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					Cu.Wire({
+						model: model,
+						view: {
+							$documentScope: $('#subView').add($('#subView2'))
+						}
+					});
+
+					$('#' + propertyName).val(newValue);
+
+					// Act
+					$('#' + propertyName).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
+		
 		test('Given a view with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
 			// Arrange
 			var called = false,
