@@ -610,9 +610,9 @@
 			ok(_([handler1Called, handler2Called, handler3Called]).all(function (item) { return item; }));
 		});
 		
-		module('Bind');
+		module('Wire');
 
-		test('Given a view with no bindModel method / Bind creates one.', function () {
+		test('Given a view with no bindModel method / Wire creates one.', function () {
 			// Arrange
 			var view = {},
 				model = { something: 'something' };

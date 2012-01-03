@@ -332,36 +332,83 @@ Cu  = (function($, undefined) {
 
 		return construct;
 	})();
-
-	CachedSelect = (function () {
-		var construct = function ($scope) {
-			this._$scope = $scope;
-		};
-
-		construct.prototype = {
-			select: function (selector) {
-				var cached = this._cache[selector];
-
-				if (cached !== undefined) {
-					return cached;
-				}
-
-				if (this._$scope === undefined) {
-					return $(selector);
-				} else {
-					return this._$scope.find(selector);
-				}
-			}
-		};
-
-		return construct;
-	})();
 	
 	Conventions = {
 		inputSelector: 'select, input[type!=button][type!=reset][type!=file][type!=checkbox][type!=radio]',
 		checkableSelector: 'input[type=checkbox], input[type=radio]',
 		clickableSelector: 'a, button, input[type=submit], input[type=button], input[type=reset]'
 	};
+	
+	InputBinding = (function () {
+		var construct = function (view) {
+			this._view = view;
+		};
+		
+		construct.prototype = {
+			_isClickable: function ($element) {
+				return $element.is(Conventions.clickableSelector);
+			},
+
+			_isInput: function ($element) {
+				return $element.is(Conventions.inputSelector);
+			},
+			
+			_isCheckable: function ($element) {
+				return $element.is(Conventions.checkableSelector);
+			},
+			
+			_isClickable: function ($element) {
+				return $element.is(Conventions.clickableSelector);
+			},
+			
+			_createCallback: function(view, propertyName) {
+				return function () {
+					view[propertyName].apply(view, arguments);
+				};
+			},
+			
+			bind: function ($elements, propertyName) {
+				if (this._isInput($elements)) {
+					this._callback = this._createCallback(this._view, propertyName);
+					this._$elements = $elements;
+					this._propertyName = propertyName;
+					
+					this._inputType = {
+						checkable: this._isCheckable($elements),
+						clickable: this._isClickable($elements)
+					};
+					
+					if (this._inputType.checkable || this._inputType.clickable) {
+						$elements.click(callback);
+					} else {
+						$elements.change(callback);
+					}
+				}
+			},
+			
+			release: function () {
+				if (this._inputType.checkable || this._inputType.clickable) {
+					this._$elements.unbind('click', this._callback);
+				} else {
+					this._$elements.unbind('change', this._callback);
+				}
+					
+				this._$elements = undefined;
+				this._propertyName = undefined;
+				this._callback = undefined;
+			},
+			
+			trigger: function () {
+				if (this._inputType.checkable || this._inputType.clickable) {
+					$elements.trigger('click');
+				} else {
+					$elements.trigger('change');
+				}
+			}
+		};
+		
+		return construct;
+	})();
 
 	BindPipelineStep = (function () {
 		var construct = function (strategy) {
