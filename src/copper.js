@@ -361,48 +361,70 @@ Cu  = (function($, undefined) {
 				return $element.is(Conventions.clickableSelector);
 			},
 			
-			_createCallback: function(view, propertyName) {
+			_createClickCallback: function(view, propertyName) {
+				return function (e) {
+					if (e.preventDefault != undefined) {
+						e.preventDefault();
+					}
+					
+					view[propertyName].apply(view, arguments);
+				};
+			},
+			
+			_createChangeCallback: function(view, propertyName) {
 				return function () {
 					view[propertyName].apply(view, arguments);
 				};
 			},
 			
+			source: function () {
+				return this._source;
+			},
+			
+			target: function () {
+				return this._target;
+			},
+			
 			bind: function ($elements, propertyName) {
-				if (this._isInput($elements)) {
-					this._callback = this._createCallback(this._view, propertyName);
-					this._$elements = $elements;
-					this._propertyName = propertyName;
+				var inputType = {
+					input: this._isInput($elements),
+					checkable: this._isCheckable($elements),
+					clickable: this._isClickable($elements)
+				};
+				
+				if (inputType.input || inputType.checkable || inputType.clickable) {
+					this._source = $elements;
+					this._target = propertyName;
 					
-					this._inputType = {
-						checkable: this._isCheckable($elements),
-						clickable: this._isClickable($elements)
-					};
+					this._inputType = inputType;
 					
 					if (this._inputType.checkable || this._inputType.clickable) {
-						$elements.click(callback);
-					} else {
-						$elements.change(callback);
+						this._callback = this._createClickCallback(this._view, propertyName);
+						$elements.click(this._callback);
+					} else if (this._inputType.input) {
+						this._callback = this._createChangeCallback(this._view, propertyName);
+						$elements.change(this._callback);
 					}
 				}
 			},
 			
 			release: function () {
 				if (this._inputType.checkable || this._inputType.clickable) {
-					this._$elements.unbind('click', this._callback);
+					this._source.unbind('click', this._callback);
 				} else {
-					this._$elements.unbind('change', this._callback);
+					this._source.unbind('change', this._callback);
 				}
 					
-				this._$elements = undefined;
-				this._propertyName = undefined;
+				this._source = undefined;
+				this._target = undefined;
 				this._callback = undefined;
 			},
 			
 			trigger: function () {
 				if (this._inputType.checkable || this._inputType.clickable) {
-					$elements.trigger('click');
+					this._source.trigger('click');
 				} else {
-					$elements.trigger('change');
+					this._source.trigger('change');
 				}
 			}
 		};
@@ -983,13 +1005,20 @@ Cu  = (function($, undefined) {
 			},
 			
 			_bindClick: function (view, $element, propertyName, callback) {
-				var handler = function (e) {
+				var handler,
+					binding,
+					handlerName = propertyName + '_Clicked';
+
+				handler	= function (e) {
 					callback(e);
 				};
 
-				view[propertyName + '_Clicked'] = handler;
+				view[handlerName] = handler;
 
-				$element.click(handler);
+				binding = new InputBinding(view);
+				binding.bind($element, handlerName);
+				
+				view._inputBindings.push(binding);
 			}
 		});
 		
@@ -1056,13 +1085,20 @@ Cu  = (function($, undefined) {
 			},
 			
 			_bindScopeClick: function (view, $element, callback) {
-				var handler = function (e) {
+				var handlerName = 'Clicked',
+					handler,
+					binding;
+				
+				handler = function (e) {
 					callback(e);
 				};
 
-				view['Clicked'] = handler;
+				view[handlerName] = handler;
 
-				$element.click(handler);
+				binding = new InputBinding(view);
+				binding.bind($element, handlerName);
+				
+				view._inputBindings.push(binding);
 			}
 		});
 		
@@ -1151,6 +1187,20 @@ Cu  = (function($, undefined) {
 		return construct;
 	})();
 	
+	var PrepareBindingListsStep = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindPipelineStep({
+			tryBind: function (view, model) {
+				if (view._inputBindings == undefined || !(view._inputBindings instanceof Array)) {
+					view._inputBindings = [];
+				}
+			}
+		});
+		
+		return construct;
+	})();
+	
 	var BindInputsByIdToViewHandlersStep = (function () {
 		var construct = function () {
 			this._selector = [Conventions.inputSelector, Conventions.checkableSelector].join(',');
@@ -1159,23 +1209,17 @@ Cu  = (function($, undefined) {
 		construct.prototype = new BindHtmlElementStep({
 			_tryBindElement: function (view, model, $el) {
 				var id = $el.attr('id'),
-					newProperty = id + '_ViewChanged',
-					callback;
+					handlerName = id + '_ViewChanged',
+					binding;
 
-				if (id != undefined && view[newProperty] != undefined) {
-					if (this._isInput($el)) {
-						$el.change(function (e) {
-							view[newProperty](e);
-						});
-
-						return true;
-					} else if (this._isCheckable($el)) {
-						$el.click(function (e) {
-							view[newProperty]($(this).is(':checked'));
-						});
-
-						return true;
+				if (id != undefined && view[handlerName] != undefined) {
+					if (this._isInput($el) || this._isCheckable($el)) {
+						binding = new InputBinding(view);
+						binding.bind($el, handlerName);
+						view._inputBindings.push(binding);
 					}
+					
+					return true;
 				}
 				
 				return false;
@@ -1193,22 +1237,14 @@ Cu  = (function($, undefined) {
 		construct.prototype = new BindHtmlElementStep({
 			_tryBindElement: function (view, model, $el) {
 				var id = $el.attr('name'),
-					newProperty = id + '_ViewChanged',
-					callback;
+					handlerName = id + '_ViewChanged',
+					binding;
 
-				if (id != undefined && view[newProperty] != undefined) {
-					if (this._isInput($el)) {
-						$el.change(function (e) {
-							view[newProperty](e);
-						});
-
-						return true;
-					} else if (this._isCheckable($el)) {
-						$el.click(function (e) {
-							view[newProperty]($(this).is(':checked'));
-						});
-
-						return true;
+				if (id != undefined && view[handlerName] != undefined) {
+					if (this._isInput($el) || this._isCheckable($el)) {
+						binding = new InputBinding(view);
+						binding.bind($el, handlerName);
+						view._inputBindings.push(binding);
 					}
 					
 					return true;
@@ -1425,15 +1461,11 @@ Cu  = (function($, undefined) {
 				var id = $el.attr('id'),
 					handlerName = id + '_Clicked',
 					callback;
-
+					
 				if (id != undefined && view[handlerName] != undefined) {
-					$el.click(function (e) {
-						if (e.preventDefault != undefined) {
-							e.preventDefault();
-						}
-
-						view[handlerName](e);
-					});
+					binding = new InputBinding(view);
+					binding.bind($el, handlerName);
+					view._inputBindings.push(binding);
 
 					return true;
 				}
@@ -1482,6 +1514,7 @@ Cu  = (function($, undefined) {
 		};
 		
 		wire.pipeline = [
+			new PrepareBindingListsStep(),
 			new BindInputsByIdToViewHandlersStep(),
 			new BindInputsByNameToViewHandlersStep(),
 			new BindClickablesToViewHandlersStep(),

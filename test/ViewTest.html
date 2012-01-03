@@ -635,7 +635,7 @@
 			continueTest(model);
 		}
 
-		test('Given a model with a function property with name the same ID as an anchor in the HTML / When anchor clicked / Calls the function ', function () {
+		test('Given a model with a function property with name the same as ID of an anchor in the HTML / When anchor clicked / Calls the function ', function () {
 			// Arrange
 			var called = false,
 				propertyName = 'helloAnchor',
@@ -650,6 +650,41 @@
 
 			// Assert
 			ok(called);
+		});
+		
+		var handlerNameFromClickable = function (clickableName) {
+			return clickableName + '_Clicked';
+		};
+		
+		var handlerNameFromInput = function (inputName) {
+			return inputName + '_ViewChanged';
+		};
+		
+		var assertBindingExists = function (view, elementSelector, handlerName) {
+			bindings = _(view._inputBindings).filter(function (binding) {
+				return (binding.source().is(elementSelector)
+					&& binding.target() == handlerName);
+			});
+			
+			ok(bindings.length == 1);
+		};
+		
+		test('Given a model with a function property with name the same as ID of an anchor in the HTML / Input binding is created ', function () {
+			var called = false,
+				propertyName = 'helloAnchor',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var view = {},
+					bindings = [];
+				
+				Cu.Wire({
+					view: view,
+					model: model
+				});
+				
+				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+			});
 		});
 		
 		test('Given a model with a function property /  Given a view selector hash entry with name of function property and matching an anchor in the HTML / When anchor clicked / Calls the function ', function () {
@@ -677,6 +712,29 @@
 			// Assert
 			ok(called);
 		});
+		
+		test('Given a model with a function property /  Given a view selector hash entry with name of function property and matching an anchor in the HTML / Input binding is created ', function () {
+			var called = false,
+				propertyName = 'overreaction',
+				id = 'helloAnchor',
+				propertyFunction = function () { called = true; },
+				selectors = {};
+				
+			selectors[propertyName] = '#' + id;
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var view = {
+					selectorFor: selectors
+				};
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				assertBindingExists(view, '#' + id, handlerNameFromClickable(propertyName));
+			});
+		});
 
 		test('Given a model with a function property with name the same ID as a button in the HTML / When button clicked / Calls the function ', function () {
 			// Arrange
@@ -693,6 +751,23 @@
 
 			// Assert
 			ok(called);
+		});
+		
+		test('Given a model with a function property with name the same ID as a button in the HTML / Input binding is created ', function () {
+			var called = false,
+				propertyName = 'helloButton',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var view = {};
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+			});
 		});
 
 		test('Given a model with a function property with name the same ID as a submit input in the HTML / When submit input clicked / Calls the function ', function () {
@@ -711,6 +786,23 @@
 			// Assert
 			ok(called);
 		});
+		
+		test('Given a model with a function property with name the same ID as a submit input in the HTML / Input binding is created ', function () {
+			var called = false,
+				propertyName = 'helloInputSubmit',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var view = {};
+				
+				Cu.Wire({
+					view: view,
+					model: model
+				});
+
+				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+			});
+		});
 
 		test('Given a model with a function property with name the same ID as a button input in the HTML / When button input clicked / Calls the function ', function () {
 			// Arrange
@@ -728,6 +820,23 @@
 			// Assert
 			ok(called);
 		});
+		
+		test('Given a model with a function property with name the same ID as a button input in the HTML / Input binding is created ', function () {
+			var called = false,
+				propertyName = 'helloInputButton',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var view = {};
+				
+				Cu.Wire({
+					view: view,
+					model: model
+				});
+
+				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+			});
+		});
 
 		test('Given a model with a function property with name the same ID as a reset input in the HTML / When reset input clicked / Calls the function ', function () {
 			// Arrange
@@ -744,6 +853,23 @@
 
 			// Assert
 			ok(called);
+		});
+		
+		test('Given a model with a function property with name the same ID as a reset input in the HTML / When reset input clicked / Input binding is created ', function () {
+			var called = false,
+				propertyName = 'helloInputReset',
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var view = {};
+				
+				Cu.Wire({
+					view: view,
+					model: model
+				});
+
+				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+			});
 		});
 
 		test('Given a model with a function property with name "Clicked" and a view with a clickable scope element / When element clicked / Calls the function ', function () {
@@ -766,6 +892,27 @@
 
 			// Assert
 			ok(called);
+		});
+		
+		test('Given a model with a function property with name "Clicked" and a view with a clickable scope element / Input binding is created ', function () {
+			var called = false,
+				scopeSelector = '#helloAnchor',
+				docScope = $(scopeSelector),
+				propertyName = 'Click',
+				handlerName = 'Clicked'
+				propertyFunction = function () { called = true; };
+
+			givenModelWithFunctionProperty(propertyName, propertyFunction, function (model) {
+				var view = {
+					$documentScope: docScope
+				};
+				
+				Cu.Wire({
+					view: view,
+					model: model });
+
+				assertBindingExists(view, scopeSelector, handlerName);
+			});
 		});
 
 		test('Given a model with a function property with name not found in HTML / Constructor does not throw', function () {
@@ -1497,6 +1644,47 @@
 			});
 		});
 		
+		test('Given a view with a method with a name of X_ViewChanged / Given an input with name of X in the HTML / Changing the input calls the property from the extension source.', function () {
+			// Arrange
+			var called = false,
+				extendSource,
+				subject,
+				propertyName = 'namedInput';
+
+			view = {};
+			view[propertyName + '_ViewChanged'] = function () { called = true; };
+
+			Cu.Wire({
+				model: {},
+				view: view
+			});
+
+			// Act
+			$('[name=' + propertyName + ']').trigger('change');
+
+			// Assert
+			ok(called);
+		});
+		
+		test('Given a view with a method with a name of X_ViewChanged / Given an input with name of X in the HTML / Input binding is created ', function () {
+			// Arrange
+			var called = false,
+				extendSource,
+				subject,
+				propertyName = 'namedInput',
+				handlerName = handlerNameFromInput(propertyName);
+
+			view = {};
+			view[handlerName] = function () { called = true; };
+
+			Cu.Wire({
+				model: {},
+				view: view
+			});
+
+			assertBindingExists(view, '[name=' + propertyName + ']', handlerName);
+		});
+		
 		test('Given a view with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
 			// Arrange
 			var called = false,
@@ -1517,6 +1705,25 @@
 
 			// Assert
 			ok(called);
+		});
+		
+		test('Given a view with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Input binding is created ', function () {
+			// Arrange
+			var called = false,
+				extendSource,
+				subject,
+				propertyName = 'dynamicInput',
+				handlerName = handlerNameFromInput(propertyName);
+
+			view = {};
+			view[handlerName] = function () { called = true; };
+
+			Cu.Wire({
+				model: {},
+				view: view
+			});
+
+			assertBindingExists(view, '#' + propertyName, handlerName);
 		});
 
 		test('Given a view with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Clicking the button calls the property from the extension source.', function () {
@@ -1539,6 +1746,25 @@
 
 			// Assert
 			ok(called);
+		});
+		
+		test('Given a view with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Input binding is created ', function () {
+			// Arrange
+			var called = false,
+				extendSource,
+				subject,
+				propertyName = 'helloInputButton',
+				handlerName = handlerNameFromClickable(propertyName);
+
+			view = {};
+			view[handlerName] = function () { called = true; };
+
+			Cu.Wire({
+				model: {},
+				view: view
+			});
+
+			assertBindingExists(view, '#' + propertyName, handlerName);
 		});
 	</script>
 </html>
