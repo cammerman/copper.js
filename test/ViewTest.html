@@ -660,7 +660,7 @@
 			return inputName + '_ViewChanged';
 		};
 		
-		var assertBindingExists = function (view, elementSelector, handlerName) {
+		var assertInputBindingExists = function (view, elementSelector, handlerName) {
 			bindings = _(view._inputBindings).filter(function (binding) {
 				return (binding.source().is(elementSelector)
 					&& binding.target() == handlerName);
@@ -683,7 +683,7 @@
 					model: model
 				});
 				
-				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+				assertInputBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
 			});
 		});
 		
@@ -732,7 +732,7 @@
 					view: view
 				});
 
-				assertBindingExists(view, '#' + id, handlerNameFromClickable(propertyName));
+				assertInputBindingExists(view, '#' + id, handlerNameFromClickable(propertyName));
 			});
 		});
 
@@ -766,7 +766,7 @@
 					view: view
 				});
 
-				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+				assertInputBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
 			});
 		});
 
@@ -800,7 +800,7 @@
 					model: model
 				});
 
-				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+				assertInputBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
 			});
 		});
 
@@ -834,7 +834,7 @@
 					model: model
 				});
 
-				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+				assertInputBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
 			});
 		});
 
@@ -868,7 +868,7 @@
 					model: model
 				});
 
-				assertBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
+				assertInputBindingExists(view, '#' + propertyName, handlerNameFromClickable(propertyName));
 			});
 		});
 
@@ -911,7 +911,7 @@
 					view: view,
 					model: model });
 
-				assertBindingExists(view, scopeSelector, handlerName);
+				assertInputBindingExists(view, scopeSelector, handlerName);
 			});
 		});
 
@@ -973,6 +973,65 @@
 				});
 			});
 		});
+		
+		var assertModelBindingExists = function (view, modelPropertyName, handlerName) {
+			bindings = _(view._modelBindings).filter(function (binding) {
+				return (binding.source() == modelPropertyName
+					&& binding.target() == handlerName);
+			});
+			
+			ok(bindings.length == 1);
+		};
+		
+		var givenBlankViewBoundToModel = function(model, continueTest) {
+			var view = {};
+			
+			Cu.Wire({
+				view: view,
+				model: model
+			});
+			
+			continueTest(view);
+		};
+		
+		test('Given a model with an Observable property with name the same ID as an input element in the HTML / Input binding is created ', function () {
+
+			var called = false,
+				propertyName = 'dynamicContent',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(propertyName, oldContent, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						assertInputBindingExists(view, '#' + propertyName, handlerNameFromInput(propertyName));
+					});
+				});
+			});
+		});
+		
+		var modelChangeHandlerName = function (propertyName) {
+			return propertyName + '_ModelChanged';
+		};
+		
+		test('Given a model with an Observable property with name the same ID as an element in the HTML / Model binding is created ', function () {
+
+			var called = false,
+				propertyName = 'dynamicContent',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(propertyName, oldContent, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+					});
+				});
+			});
+		});
+
 
 		var givenElementWithClass = function ($element, extraClass, continueTest) {
 			if (!$element.hasClass(extraClass)) {
@@ -1026,6 +1085,22 @@
 			});
 		});
 		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given classless HTML element with ID "X" / Model binding is created ', function () {
+			expect(1);
+
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				givenBlankViewBoundToModel(model, function (view) {
+					assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+				});
+			});
+		});
+		
 		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given HTML element with ID "X", class "Y", and other classes / When observable becomes false / HTML element does not lost classes other than "Y"', function () {
 			expect(1);
 
@@ -1070,6 +1145,23 @@
 
 				// Assert
 				ok($element.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given classless HTML input with name "X" / Model binding is created', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'namedModalInput',
+				$element = $('input[name="' + elementId + '"]'),
+				mode = 'Changed',
+				propertyName = elementId + '_Is_' + mode;
+
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				givenBlankViewBoundToModel(model, function (view) {
+					assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+				});
 			});
 		});
 		
@@ -1149,6 +1241,33 @@
 
 				// Assert
 				ok($element.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view selector hash entry with name of Observable property and value of an HTML element with name "X" / Model binding is created ', function () {
+			expect(1);
+			
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				selectorName = 'overreaction',
+				propertyName = selectorName + '_Is_' + mode,
+				selectors = {};
+
+			selectors[selectorName] = '#' + elementId;
+				
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				var view = {
+					selectorFor: selectors
+				};
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
 			});
 		});
 		
@@ -1286,7 +1405,67 @@
 			});
 		});
 
-		test('Given a model with an Observable property with name the same ID as an input in the HTML / When input changes / Observable value is changed to match value of input', function () {
+		test('Given a model with an Observable property / Given a view selector hash entry with name of Observable property and value of input in the HTML / Input binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.',
+				selectors = {};
+			
+			selectors[propertyName] = '#' + id;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {
+						selectorFor: selectors
+					}; 
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+										
+					assertInputBindingExists(view, propertyName, handlerNameFromInput(propertyName));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view selector hash entry with name of Observable property and value of input in the HTML / Model binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.',
+				selectors = {};
+			
+			selectors[propertyName] = '#' + id;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {
+						selectorFor: selectors
+					}; 
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+										
+					assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name the same as the ID of an input in the HTML / When input changes / Observable value is changed to match value of input', function () {
 			expect(1);
 
 			// Arrange
@@ -1310,7 +1489,43 @@
 			});
 		});
 		
-		test('Given a model with an Observable property with name the same ID as an input in the HTML / When observable changes / Input value is changed to match observable value', function () {
+		test('Given a model with an Observable property with name the same as the ID of an input in the HTML / Input binding is created ', function () {
+			expect(1);
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						assertInputBindingExists(view, '#' + propertyName, handlerNameFromInput(propertyName));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name the same as the ID of an input in the HTML / Model binding is created ', function () {
+			expect(1);
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name the same as the ID of an input in the HTML / When observable changes / Input value is changed to match observable value', function () {
 			expect(1);
 
 			// Arrange
@@ -1334,6 +1549,41 @@
 		});
 		
 		
+		test('Given a model with an Observable property with name the same as the ID of an input in the HTML / Input binding is created ', function () {
+			expect(1);
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						assertInputBindingExists(view, '#' + propertyName, handlerNameFromInput(propertyName));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name the same as the ID of an input in the HTML / Model binding is created ', function () {
+			expect(1);
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldValue, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+					});
+				});
+			});
+		});
 		
 		test('Given a model with an Observable property with name the same as an input name in the HTML / When input changes / Observable value is changed to match value of input', function () {
 			expect(1);
@@ -1443,6 +1693,60 @@
 			});
 		});
 		
+		test('Given a model with an Observable property named "Value" and a view with an editable scope element / Input binding is created', function () {
+			expect(1);
+
+			var called = false,
+				propertyName = 'Value',
+				elementId = 'dynamicInput',
+				$docScope = $('#' + elementId),
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(elementId, oldContent, function () {
+					var view = {
+						$documentScope: $docScope
+					};
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					});
+
+					assertInputBindingExists(view, '#' + elementId, handlerNameFromInput(propertyName));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property named "Value" and a view with an editable scope element / Model binding is created', function () {
+			expect(1);
+
+			var called = false,
+				propertyName = 'Value',
+				elementId = 'dynamicInput',
+				$docScope = $('#' + elementId),
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(elementId, oldContent, function () {
+					var view = {
+						$documentScope: $docScope
+					};
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					});
+
+					assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+				});
+			});
+		});
+		
 		test('Given a model with an Observable property named "Is_X" and a view with a classless scope element / When observable becomes true / HTML element receives a class of X', function () {
 			expect(1);
 
@@ -1467,6 +1771,31 @@
 
 				// Assert
 				ok($docScope.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property named "Is_X" and a view with a classless scope element / Model binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				mode = 'changed',
+				propertyName = 'Is_' + mode,
+				elementId = 'modalElement',
+				$docScope = $('#' + elementId),
+				initialValue = false;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				var view = {
+					$documentScope: $docScope
+				};
+				
+				Cu.Wire({
+					view: view,
+					model: model
+				});
+
+				assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
 			});
 		});
 		
@@ -1644,6 +1973,51 @@
 			});
 		});
 		
+		// start
+		test('Given a view with a method with a name of X_ModelChanged / Given an Observable model property called X / Changing the Observable value calls the view handler ', function () {
+			var called = false,
+				initialValue = 'something old',
+				newValue = 'something new',
+				propertyName = 'iAmImportant',
+				handlerName = modelChangeHandlerName(propertyName),
+				view;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {			
+				view = {};
+				view[handlerName] = function () { called = true; };
+
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				model[propertyName].val(newValue);
+
+				ok(called);
+			});
+		});
+		
+		test('Given a view with a method with a name of X_ModelChanged / Given an Observable model property called X / Model binding is created ', function () {
+			var called = false,
+				initialValue = 'something old',
+				propertyName = 'iAmImportant',
+				handlerName = modelChangeHandlerName(propertyName),
+				view;
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {			
+				view = {};
+				view[handlerName] = function () { called = true; };
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				assertModelBindingExists(view, propertyName, handlerName);
+			});
+		});
+		// end
+		
 		test('Given a view with a method with a name of X_ViewChanged / Given an input with name of X in the HTML / Changing the input calls the property from the extension source.', function () {
 			// Arrange
 			var called = false,
@@ -1682,7 +2056,7 @@
 				view: view
 			});
 
-			assertBindingExists(view, '[name=' + propertyName + ']', handlerName);
+			assertInputBindingExists(view, '[name=' + propertyName + ']', handlerName);
 		});
 		
 		test('Given a view with a method with a name of X_ViewChanged / Given an input with ID of X in the HTML / Changing the input calls the property from the extension source.', function () {
@@ -1723,7 +2097,7 @@
 				view: view
 			});
 
-			assertBindingExists(view, '#' + propertyName, handlerName);
+			assertInputBindingExists(view, '#' + propertyName, handlerName);
 		});
 
 		test('Given a view with a method with a name of X_Clicked / Given a button with ID of X in the HTML / Clicking the button calls the property from the extension source.', function () {
@@ -1764,7 +2138,7 @@
 				view: view
 			});
 
-			assertBindingExists(view, '#' + propertyName, handlerName);
+			assertInputBindingExists(view, '#' + propertyName, handlerName);
 		});
 	</script>
 </html>

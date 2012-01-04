@@ -1195,6 +1195,10 @@ Cu  = (function($, undefined) {
 				if (view._inputBindings == undefined || !(view._inputBindings instanceof Array)) {
 					view._inputBindings = [];
 				}
+				
+				if (view._modelBindings == undefined || !(view._modelBindings instanceof Array)) {
+					view._modelBindings = [];
+				}
 			}
 		});
 		
