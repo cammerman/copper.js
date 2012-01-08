@@ -2,7 +2,7 @@
     copper.js
     Author: Chris Ammerman
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
-    Version 0.5
+    Version 0.7
 */
 Cu  = (function($, undefined) {
 	var Observable,
@@ -192,6 +192,10 @@ Cu  = (function($, undefined) {
 				_(this._subscriptions).forEach(function (handler) {
 					handler(newValue);
 				});
+			},
+			
+			notify: function () {
+				this._notify(this._value);
 			},
 			
 			as: function (transform) {
@@ -431,6 +435,66 @@ Cu  = (function($, undefined) {
 		
 		return construct;
 	})();
+	
+	ModelBinding = (function () {
+		var construct = function (view, model) {
+			this._view = view;
+			this._model = model;
+		};
+		
+		construct.prototype = {
+			_createClickCallback: function(view, propertyName) {
+				return function (e) {
+					if (e.preventDefault != undefined) {
+						e.preventDefault();
+					}
+					
+					view[propertyName].apply(view, arguments);
+				};
+			},
+			
+			_createChangeCallback: function(view, propertyName) {
+				return function () {
+					view[propertyName].apply(view, arguments);
+				};
+			},
+			
+			source: function () {
+				return this._source;
+			},
+			
+			target: function () {
+				return this._target;
+			},
+			
+			bind: function (modelProperty, viewPropertyName) {
+				var property = this._model[modelProperty];
+				
+				this._source = modelProperty;
+				this._target = viewPropertyName;
+				
+				if (property instanceof Observable) {
+					this._callback = this._createChangeCallback(this._view, viewPropertyName);
+					property.subscribe(this._callback);
+				}
+			},
+			
+			release: function () {
+				this._model[this._source].release();
+					
+				this._model = undefined;
+				this._source = undefined;
+				this._target = undefined;
+				this._callback = undefined;
+			},
+			
+			trigger: function () {
+				this._model[this._source].notify();
+			}
+		};
+		
+		return construct;
+	})();
 
 	BindPipelineStep = (function () {
 		var construct = function (strategy) {
@@ -510,21 +574,23 @@ Cu  = (function($, undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindChangeEvent(view, property, propertyName);
+					return this._tryBindChangeEvent(view, model, property, propertyName);
 				}
 				
 				return false;
 			},
 			
-			_tryBindChangeEvent: function (view, property, propertyName) {
+			_tryBindChangeEvent: function (view, model, property, propertyName) {
 				var scope = this,
+					binding,
 					handlerName = propertyName + '_ModelChanged';
 
 				if (view[handlerName] != undefined) {
-					property.subscribe(function (newValue) {
-						view[handlerName](newValue);
-					});
+					binding = new ModelBinding(view, model);
+					binding.bind(propertyName, handlerName);
 					
+					view._modelBindings.push(binding);
+				
 					return true;
 				}
 				
@@ -547,7 +613,7 @@ Cu  = (function($, undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindElement(view, property, propertyName);
+					return this._tryBindElement(view, model, propertyName);
 				}
 				
 				return false;
@@ -561,11 +627,11 @@ Cu  = (function($, undefined) {
 				});
 			},
 			
-			_tryBindElement: function (view, property, propertyName) {
+			_tryBindElement: function (view, model, propertyName) {
 				$element = this._findBindableElement(view, propertyName);
 
 				if ($element && $element.length > 0) {
-					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
+					if (this._tryBindInputToObservableProperty(view, model, $element, propertyName)) {
 						return true;
 					}
 				}
@@ -573,10 +639,11 @@ Cu  = (function($, undefined) {
 				return false;
 			},
 			
-			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
+			_tryBindInputToObservableProperty: function (view, model, $element, propertyName) {
 				var scope = this,
-					newProperty = propertyName + '_ModelChanged',
-					callback;
+					handlerName = propertyName + '_ModelChanged',
+					callback,
+					binding;
 					
 				if (scope._isInput($element)) {
 					callback = function (newValue) {
@@ -589,8 +656,13 @@ Cu  = (function($, undefined) {
 				}
 
 				if (callback != undefined) {
-					view[newProperty] = callback;
-					property.subscribe(callback);
+					view[handlerName] = callback;
+					
+					binding = new ModelBinding(view, model);
+					binding.bind(propertyName, handlerName);
+					
+					view._modelBindings.push(binding);
+					
 					return true;
 				}
 
@@ -654,7 +726,7 @@ Cu  = (function($, undefined) {
 					handler;
 
 				if (property instanceof Observable && propertyName.length > 0) {
-					return this._tryBindElement(view, property, propertyName);
+					return this._tryBindElement(view, model, propertyName);
 				}
 				
 				return false;
@@ -668,7 +740,7 @@ Cu  = (function($, undefined) {
 				});
 			},
 			
-			_tryBindElement: function (view, property, propertyName) {
+			_tryBindElement: function (view, model, propertyName) {
 				var $element,
 					lengthOfId = propertyName.indexOf('_Is_'),
 					startOfClass = lengthOfId + 4,
@@ -680,7 +752,7 @@ Cu  = (function($, undefined) {
 					$element = this._findBindableElement(view, id);
 
 					if ($element && $element.length > 0) {
-						if (this._tryBindClassToObservableProperty(view, $element, property, propertyName, startOfClass)) {
+						if (this._tryBindClassToObservableProperty(view, model, $element, propertyName, startOfClass)) {
 							return true;
 						}
 					}
@@ -689,9 +761,10 @@ Cu  = (function($, undefined) {
 				return false;
 			},
 			
-			_tryBindClassToObservableProperty: function (view, $element, property, propertyName, startOfClass) {
+			_tryBindClassToObservableProperty: function (view, model, $element, propertyName, startOfClass) {
 				var scope = this,
-					newProperty = propertyName + '_ModelChanged',
+					binding,
+					handlerName = propertyName + '_ModelChanged',
 					mode = propertyName.slice(startOfClass),
 					callback;
 					
@@ -704,8 +777,13 @@ Cu  = (function($, undefined) {
 						}
 					};
 					
-					view[newProperty] = callback;
-					property.subscribe(callback);
+					view[handlerName] = callback;
+					
+					binding = new ModelBinding(view, model);
+					binding.bind(propertyName, handlerName);
+					
+					view._modelBindings.push(binding);
+					
 					return true;
 				}
 				
@@ -777,32 +855,39 @@ Cu  = (function($, undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindElement(view, property, propertyName);
+					return this._tryBindElement(view, model, propertyName);
 				}
 				
 				return false;
 			},
 			
-			_tryBindElement: function (view, property, propertyName) {
+			_tryBindElement: function (view, model, propertyName) {
 				$element = this._findBindableElement(view, propertyName);
 
 				if ($element && $element.length > 0) {
 					if (!this._isInput($element) && !this._isCheckable($element)) {
-						return this._bindContent(view, $element, property, propertyName);
+						this._bindContent(view, model, $element, propertyName);
+						
+						return true;
 					}
 				}
 
 				return false;
 			},
 						
-			_bindContent: function (view, $element, property, propertyName) {
-				var callback = function (newValue) {
-					$element.html(newValue);
-				};
+			_bindContent: function (view, model, $element, propertyName) {
+				var	callback = function (newValue) {
+						$element.html(newValue);
+					},
+					handlerName = propertyName + '_ModelChanged',
+					binding;
 
-				view[propertyName + '_ModelChanged'] = callback;
+				view[handlerName] = callback;
 
-				property.subscribe(callback);
+				binding = new ModelBinding(view, model);
+				binding.bind(propertyName, handlerName);
+				
+				view._modelBindings.push(binding);
 			}
 		});
 		
@@ -843,21 +928,21 @@ Cu  = (function($, undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindScopeElement(view, property, propertyName);
+					return this._tryBindScopeElement(view, model, propertyName);
 				}
 				
 				return false;
 			},
 			
-			_tryBindScopeElement: function (view, property, propertyName) {
+			_tryBindScopeElement: function (view, model, propertyName) {
 				$element = view.$documentScope;
 
 				if (propertyName == 'Value' && $element) {
-					if (this._tryBindInputToObservableProperty(view, $element, property, propertyName)) {
+					if (this._tryBindInputToObservableProperty(view, model, $element, propertyName)) {
 						return true;
 					}
 				} else if (propertyName.indexOf('Is_') == 0) {
-					if (this._tryBindElementToObservableMode(view, $element, property, propertyName, propertyName.slice(3))) {
+					if (this._tryBindElementToObservableMode(view, model, $element, propertyName, propertyName.slice(3))) {
 						return true;
 					}
 				}
@@ -865,9 +950,18 @@ Cu  = (function($, undefined) {
 				return false;
 			},
 			
-			_tryBindInputToObservableProperty: function (view, $element, property, propertyName) {
+			_bindToModel: function (view, model, handlerName, propertyName) {
+				var binding;
+				
+				binding = new ModelBinding(view, model);
+				binding.bind(propertyName, handlerName);
+				
+				view._modelBindings.push(binding);
+			},
+			
+			_tryBindInputToObservableProperty: function (view, model, $element, propertyName) {
 				var scope = this,
-					newProperty = propertyName + '_ModelChanged',
+					handlerName = propertyName + '_ModelChanged',
 					callback;
 					
 				if (scope._isInput($element)) {
@@ -881,8 +975,8 @@ Cu  = (function($, undefined) {
 				}
 
 				if (callback) {
-					view[newProperty] = callback;
-					property.subscribe(callback);
+					view[handlerName] = callback;
+					this._bindToModel(view, model, handlerName, propertyName);
 					
 					return true;
 				}
@@ -890,9 +984,9 @@ Cu  = (function($, undefined) {
 				return false;
 			},
 			
-			_tryBindElementToObservableMode: function (view, $element, property, propertyName, mode) {
+			_tryBindElementToObservableMode: function (view, model, $element, propertyName, mode) {
 				var scope = this,
-					newProperty = propertyName + '_ModelChanged',
+					handlerName = propertyName + '_ModelChanged',
 					callback;
 					
 				callback = function (newValue) {
@@ -904,8 +998,8 @@ Cu  = (function($, undefined) {
 				};
 
 				if (callback) {
-					view[newProperty] = callback;
-					property.subscribe(callback);
+					view[handlerName] = callback;
+					this._bindToModel(view, model, handlerName, propertyName);
 					
 					return true;
 				}
@@ -927,32 +1021,37 @@ Cu  = (function($, undefined) {
 					handler;
 
 				if (property instanceof Observable) {
-					return this._tryBindScopeElement(view, property, propertyName);
+					return this._tryBindScopeElement(view, model, propertyName);
 				}
 				
 				return false;
 			},
 			
-			_tryBindScopeElement: function (view, property, propertyName) {
+			_tryBindScopeElement: function (view, model, propertyName) {
 				$element = view.$documentScope;
 
 				if (propertyName == 'Value' && $element) {
 					if (this._isInput($element)) {
-						return this._bindContent(view, $element, property, propertyName);
+						return this._bindContent(view, model, $element, propertyName);
 					}
 				}
 
 				return false;
 			},
 			
-			_bindContent: function (view, $element, property, propertyName) {
+			_bindContent: function (view, model, $element, propertyName) {
 				var callback = function (newValue) {
-					$element.html(newValue);
-				};
+						$element.html(newValue);
+					},
+					handlerName = propertyName + '_ModelChanged',
+					binding;
 
-				view[propertyName + '_ModelChanged'] = callback;
+				view[handlerName] = callback;
 
-				property.subscribe(callback);
+				binding = new ModelBinding(view, model);
+				binding.bind(propertyName, handlerName);
+				
+				view._modelBindings.push(binding);
 			}
 		});
 		
@@ -1287,24 +1386,32 @@ Cu  = (function($, undefined) {
 				return false;
 			},
 			
+			_bindInput: function (view, $element, handlerName) {
+				var binding = new InputBinding(view);
+				binding.bind($element, handlerName);
+				view._inputBindings.push(binding);
+			},
+			
 			_bindOvervablePropertyToInput: function (view, $scopeElement, property) {
 				var handlerName = 'Value_ViewChanged',
 					callback;
 					
 				if (this._isInput($element)) {
 					callback = function (e) {
-						property.val($(this).val());
-					};
-
-					view[handlerName] = callback;		
-					$element.change(callback);
-				} else if (this._isCheckable($element)) {
-					callback = function (e) {
-						property.val($(this).is(':checked'));
+						property.val($(e.target).val());
 					};
 
 					view[handlerName] = callback;
-					$element.click(callback);
+				} else if (this._isCheckable($element)) {
+					callback = function (e) {
+						property.val($(e.target).is(':checked'));
+					};
+
+					view[handlerName] = callback;
+				}
+				
+				if (callback !== undefined) {
+					this._bindInput(view, $scopeElement, handlerName);
 				}
 			},
 
@@ -1317,15 +1424,17 @@ Cu  = (function($, undefined) {
 						model['Value'] = $(e.target).val();
 					};
 
-					view[handlerName] = callback;		
-					$element.change(callback);
+					view[handlerName] = callback;
 				} else if (this._isCheckable($element)) {
 					callback = function (e) {
 						model['Value'] = $(e.target).is(':checked');
 					};
 
 					view[handlerName] = callback;
-					$element.click(callback);
+				}
+				
+				if (callback !== undefined) {
+					this._bindInput(view, $scopeElement, handlerName);
 				}
 			}
 		});
@@ -1360,6 +1469,12 @@ Cu  = (function($, undefined) {
 
 				return false;
 			},
+			
+			_bindInput: function (view, $element, handlerName) {
+				var binding = new InputBinding(view);
+				binding.bind($element, handlerName);
+				view._inputBindings.push(binding);
+			},
 
 			_bindOvervablePropertyToInput: function (view, $element, property, propertyName) {
 				var handlerName = propertyName + '_ViewChanged',
@@ -1367,18 +1482,20 @@ Cu  = (function($, undefined) {
 					
 				if (this._isInput($element)) {
 					callback = function (e) {
-						property.val($(this).val());
+						property.val($(e.target).val());
 					};
 
 					view[handlerName] = callback;		
-					$element.change(callback);
+					
+					this._bindInput(view, $element, handlerName);
 				} else if (this._isCheckable($element)) {
 					callback = function (e) {
-						property.val($(this).is(':checked'));
+						property.val($(e.target).is(':checked'));
 					};
 
 					view[handlerName] = callback;
-					$element.click(callback);
+					
+					this._bindInput(view, $element, handlerName);
 				}
 			},
 
@@ -1392,14 +1509,16 @@ Cu  = (function($, undefined) {
 					};
 
 					view[handlerName] = callback;		
-					$element.change(callback);
+					
+					this._bindInput(view, $element, handlerName);
 				} else if (this._isCheckable($element)) {
 					callback = function (e) {
 						model[propertyName] = $(e.target).is(':checked');
 					};
 
 					view[handlerName] = callback;
-					$element.click(callback);
+					
+					this._bindInput(view, $element, handlerName);
 				}
 			}
 		});

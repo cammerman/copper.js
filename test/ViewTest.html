@@ -997,7 +997,7 @@
 		test('Given a model with an Observable property with name the same ID as an input element in the HTML / Input binding is created ', function () {
 
 			var called = false,
-				propertyName = 'dynamicContent',
+				propertyName = 'dynamicInput',
 				initialValue = 'blah',
 				oldContent = 'Something unremarkable',
 				newContent = 'Something super special and important.';
@@ -1430,7 +1430,7 @@
 						view: view
 					});
 										
-					assertInputBindingExists(view, propertyName, handlerNameFromInput(propertyName));
+					assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
 				});
 			});
 		});
