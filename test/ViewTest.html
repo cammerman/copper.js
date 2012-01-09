@@ -2140,5 +2140,81 @@
 
 			assertInputBindingExists(view, '#' + propertyName, handlerName);
 		});
+		
+		test('Given an observable bound to an input / When syncronizeFromModel called / Input receives observable value. ', function () {
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldContent, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						view.syncronizeFromModel();
+						
+						equal($('#' + propertyName).val(), initialValue);
+					});
+				});
+			});
+		});
+		
+		test('Given an observable bound to an input / When syncronizeFromInputs called / Observable receives input value. ', function () {
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				inputContent = 'Something unremarkable';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, inputContent, function () {
+					givenBlankViewBoundToModel(model, function (view) {
+						view.syncronizeFromInputs();
+				
+						equal(model[propertyName].val(), inputContent);
+					});
+				});
+			});
+		});
+		
+		test('Given an observable bound to an input / When initializeFromModel called / Input receives observable value. ', function () {
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, oldContent, function () {
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					}).initializeFromModel();
+						
+					equal($('#' + propertyName).val(), initialValue);
+				});
+			});
+		});
+		
+		test('Given an observable bound to an input / When initializeFromInputs called / Observable receives input value. ', function () {
+
+			var called = false,
+				propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				inputContent = 'Something unremarkable';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, inputContent, function () {
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					}).initializeFromInputs();
+			
+					equal(model[propertyName].val(), inputContent);
+				});
+			});
+		});
 	</script>
 </html>

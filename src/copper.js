@@ -389,6 +389,10 @@ Cu  = (function($, undefined) {
 				return this._target;
 			},
 			
+			inputType: function () {
+				return this._inputType;
+			},
+			
 			bind: function ($elements, propertyName) {
 				var inputType = {
 					input: this._isInput($elements),
@@ -480,7 +484,8 @@ Cu  = (function($, undefined) {
 			},
 			
 			release: function () {
-				this._model[this._source].release();
+				this._model[this._source].unsubscribe(
+					this._view[this._target]);
 					
 				this._model = undefined;
 				this._source = undefined;
@@ -1620,6 +1625,36 @@ Cu  = (function($, undefined) {
 		return construct;
 	})();
 	
+	var AddAutoSyncronization = (function () {
+		var construct = function () { };
+		
+		construct.prototype = new BindPipelineStep({
+			tryBind: function (view, model) {
+				if (view.syncronizeFromModel === undefined) {
+					view.syncronizeFromModel = function () {
+						_(this._modelBindings).forEach(function (binding) {
+							binding.trigger();
+						});
+					}
+				}
+				
+				if (view.syncronizeFromInputs === undefined) {
+					view.syncronizeFromInputs = function () {
+						_(this._inputBindings).chain()
+							.filter(function (binding) {
+								return !binding.inputType().clickable;
+							})
+							.forEach(function (binding) {
+								binding.trigger();
+							});
+					}
+				}
+			}
+		});
+		
+		return construct;
+	})();
+	
 	Wire = (function () {
 		var wire = function (params) {
 			var view = params.view || {},
@@ -1634,6 +1669,15 @@ Cu  = (function($, undefined) {
 			_(wire.pipeline).forEach(function (step) {
 				step.tryBind(view, model, bindingState);
 			});
+			
+			return {
+				initializeFromInputs: function () {
+					view.syncronizeFromInputs();
+				},
+				initializeFromModel: function () {
+					view.syncronizeFromModel();
+				}
+			};			
 		};
 		
 		wire.pipeline = [
@@ -1646,7 +1690,8 @@ Cu  = (function($, undefined) {
 			new BindInputsToModelByIdStep(),
 			new BindInputsToModelByNameStep(),
 			new BindViewScopeElementToModelStep(),
-			new BindModelDirectlyStep()
+			new BindModelDirectlyStep(),
+			new AddAutoSyncronization()
 		]
 		
 		return wire;
