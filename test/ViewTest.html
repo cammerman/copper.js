@@ -138,6 +138,8 @@
 			ok(!handler1Called && !handler2Called);
 		});
 		
+		module('Computed');
+		
 		var givenObservableWithInitialValue = function(initialValue, continueTest) {
 			continueTest(new Cu.Observable(initialValue));
 		};
@@ -239,35 +241,38 @@
 		test('Given two simple Observables, and given a Computed dependent on both, when eacg simple observable value is changed, handlers of dependent observable are called with result of transformation.', function () {
 			var initialValue1 = 5,
 				initialValue2 = 10;
-			
+
 			givenObservableWithInitialValue(initialValue1, function (simpleObservable1) {
 				givenObservableWithInitialValue(initialValue2, function (simpleObservable2) {
 					var replacementValue1 = 6,
 						replacementValue2 = 11,
 						storedByHandler = undefined,
-						transformation = function () {
+						liveTransformation = function () {
 							return simpleObservable1.val() + simpleObservable2.val();
 						},
+						transformation = function (value1, value2) {
+							return value1 + value2;
+						},
 						dependent;
-						
+
 					dependent = new Cu.Computed({
 						from: [simpleObservable1, simpleObservable2],
 						as: transformation
 					});
-					
+
 					dependent.subscribe(function (newValue) {
 						storedByHandler = newValue;
 					});
-				
-					equal(dependent.val(), transformation());
-				
+
+					equal(dependent.val(), liveTransformation());
+
 					simpleObservable1.val(replacementValue1);
 
-					equal(storedByHandler, transformation());
-					
+					equal(storedByHandler, liveTransformation());
+
 					simpleObservable2.val(replacementValue1);
 
-					equal(storedByHandler, transformation());
+					equal(storedByHandler, liveTransformation());
 				});
 			});
 		});
@@ -1973,7 +1978,6 @@
 			});
 		});
 		
-		// start
 		test('Given a view with a method with a name of X_ModelChanged / Given an Observable model property called X / Changing the Observable value calls the view handler ', function () {
 			var called = false,
 				initialValue = 'something old',
@@ -1983,7 +1987,7 @@
 				view;
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {			
-				view = {};
+				var view = {};
 				view[handlerName] = function () { called = true; };
 
 				Cu.Wire({
@@ -2005,7 +2009,7 @@
 				view;
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {			
-				view = {};
+				var view = {};
 				view[handlerName] = function () { called = true; };
 				
 				Cu.Wire({
@@ -2016,7 +2020,6 @@
 				assertModelBindingExists(view, propertyName, handlerName);
 			});
 		});
-		// end
 		
 		test('Given a view with a method with a name of X_ViewChanged / Given an input with name of X in the HTML / Changing the input calls the property from the extension source.', function () {
 			// Arrange
@@ -2025,7 +2028,7 @@
 				subject,
 				propertyName = 'namedInput';
 
-			view = {};
+			var view = {};
 			view[propertyName + '_ViewChanged'] = function () { called = true; };
 
 			Cu.Wire({
@@ -2048,7 +2051,7 @@
 				propertyName = 'namedInput',
 				handlerName = handlerNameFromInput(propertyName);
 
-			view = {};
+			var view = {};
 			view[handlerName] = function () { called = true; };
 
 			Cu.Wire({
@@ -2066,7 +2069,7 @@
 				subject,
 				propertyName = 'dynamicInput';
 
-			view = {};
+			var view = {};
 			view[propertyName + '_ViewChanged'] = function () { called = true; };
 
 			Cu.Wire({
@@ -2089,7 +2092,7 @@
 				propertyName = 'dynamicInput',
 				handlerName = handlerNameFromInput(propertyName);
 
-			view = {};
+			var view = {};
 			view[handlerName] = function () { called = true; };
 
 			Cu.Wire({
@@ -2107,7 +2110,7 @@
 				subject,
 				propertyName = 'helloInputButton';
 
-			view = {};
+			var view = {};
 			view[propertyName + '_Clicked'] = function () { called = true; };
 
 			Cu.Wire({
@@ -2130,7 +2133,7 @@
 				propertyName = 'helloInputButton',
 				handlerName = handlerNameFromClickable(propertyName);
 
-			view = {};
+			var view = {};
 			view[handlerName] = function () { called = true; };
 
 			Cu.Wire({
@@ -2188,7 +2191,6 @@
 				givenInputWithIdHasValue(propertyName, oldContent, function () {
 					
 					Cu.Wire({
-						view: view,
 						model: model
 					}).initializeFromModel();
 						
@@ -2208,7 +2210,6 @@
 				givenInputWithIdHasValue(propertyName, inputContent, function () {
 					
 					Cu.Wire({
-						view: view,
 						model: model
 					}).initializeFromInputs();
 			

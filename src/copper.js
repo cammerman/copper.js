@@ -221,46 +221,56 @@ Cu  = (function($, undefined) {
 	})();
 	
 	Computed = (function () {
-		
+
 		var construct = function (init) {
-			var scope = this;
-			
+			var scope = this,
+				initialValues = [];
+
 			Observable.call(scope);
-			
+
 			if (init.from instanceof Array) {
 				scope._dependentOn = init.from;
 			} else {
 				scope._dependentOn = [init.from];
 			}
-			
+
 			_(scope._dependentOn).forEach(function (source) {
 				source.subscribe(function (newValue) {
+					scope._listen.apply(scope, _(scope._dependentOn).map(function (dependency) {
+						if (dependency == source && newValue) {
+							return newValue;
+						} else {
+							return dependency.val();
+						}
+					}));
+
 					// Only pass the value through if this is the sole source for the computation.
-					scope._listen((scope._dependentOn.length == 1) ? newValue : undefined);
+					//scope._listen((scope._dependentOn.length == 1) ? newValue : undefined);
 				});
 			});
-			
-			scope._when = init.when || function() { return true; };
-			scope._transform = init.as || function(newValue) { return newValue; };
-			
-			scope._syncValue();
+
+			scope._when = init.when || function () { return true; };
+			scope._transform = init.as || function (newValue) { return newValue; };
+
+			initialValues = _(scope._dependentOn).map(function (dependency) { return dependency.val(); });
+			scope._syncValue.apply(scope, initialValues);
 		};
-		
+
 		construct.prototype = Extender.extendPrototype(Observable, {
-			_listen: function (newValue) {
-				if (this._when(newValue)) {
-					this._syncValue(newValue);
+			_listen: function () {
+				if (this._when.apply(this, Array.prototype.slice.call(arguments))) {
+					this._syncValue.apply(this, Array.prototype.slice.call(arguments));
 					this._notify(this._value);
 				}
 			},
-			
-			_syncValue: function (newValue) {
-				this._value = this._transform(newValue);
+
+			_syncValue: function () {
+				this._value = this._transform.apply(this, Array.prototype.slice.call(arguments));
 			},
-			
+
 			dependentOn: function (reference) {
 				var scope = this;
-				
+
 				if (reference === undefined) {
 					return _.clone(scope._dependentOn);
 				} else {
@@ -269,12 +279,12 @@ Cu  = (function($, undefined) {
 					});
 				}
 			},
-			
+
 			val: function () {
 				return this._value;
 			}
 		});
-		
+
 		return construct;
 	})();
 
