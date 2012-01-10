@@ -420,6 +420,7 @@ Note that the handlers are just plain old Observable change event handlers, taki
 If you have some custom binding to do between your View and ViewModel, you can easily hook in at the end of the auto-binding process to receive the ViewModel object and do what you need to with it. When autobinding, Copper looks for a function on your View object called ```bindModel``` which is intended to take the ViewModel as an argument and store it in a field on the View. If none is provided, Copper will create one itself. If you include a ```bindModel``` method on your view, you take responsibility for storing the reference to the ViewModel, and have the opporutunity to do any last-minute manual binding or boookkeeping you desire. This most cleanly implemented when you have defined a View prototype ahead of time, so that you can make use of ```this```.
 
 Example:
+
 ```javascript
 var viewModel = {
 	firstName: new Observable('')
