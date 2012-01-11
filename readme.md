@@ -755,6 +755,5 @@ There are a number of features I plan to add to Copper in future releases. Gener
 * Auto-bind any element repetition to an ObservableCollection
 * Self-rendering views and template-based support for same.
 * Generate a simple ViewModel "bag of observables" from a hash of initial values.
-* Auto-initialization in either direction: from HTML to ViewModel, or from ViewModel to HTML.
 
 _Stay tuned!_
