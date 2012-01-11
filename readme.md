@@ -716,6 +716,36 @@ viewModel.userForm_Is_invalid.val(true); // Adds the "invalid" class to the div.
 viewModel.userForm_Is_invalid.val(false); // Removes the "invalid" class to the div.
 ```
 
+### Explicit full-binding syncronization
+
+Once you have your View and ViewModel bound together, it's fairly common to want to sync one fully from the other. Commonly this is done as an initialization step immediately after binding. So Copper.js gives you a quick and easy way to initiate this syncronization on all of its known bindings as a chained method on the result of the ```Wire``` call.
+
+To syncronize from view to model, which is common if you send initial state down in your HTML, call the chained ```initializeFromInputs``` method after binding. This will trigger events for all input bindings (excluding clickables), so that data flows out of them.
+
+```javascript
+var view = // ...
+var model = // ...
+
+Cu.Wire({
+	view: view,
+	model: model
+}).initializeFromInputs();
+```
+
+If it's your model that has all the initial state, call ```initializeFromModel``` instead.
+
+```javascript
+var view = // ...
+var model = // ...
+
+Cu.Wire({
+	view: view,
+	model: model
+}).initializeFromModel();
+```
+
+You can also trigger either of these syncronization routines at any time by calling corresponding methods that Copper.js adds to your view: ```syncronizeFromInputs``` and ```syncronizeFromModel```, respectively.
+
 ## Future Auto-Binding Features
 
 There are a number of features I plan to add to Copper in future releases. Generally they are all entered in the Issues list, but a few highlights include:
