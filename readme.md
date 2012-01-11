@@ -48,7 +48,117 @@ Observable can hold any type of object you want. But it will only raise an event
 You can also store arrays in an Observable, but the event will only fire when the whole array is replaced. If you need to know when items are added or removed, you can use an ObservableCollection.
 
 ##Computed
-_...Documentation coming soon..._
+
+One very common scenario in applications that use MVVM is to have certain aspects of the ViewModel which depend on others in some way. For example, you may want to display the formatted version of unadorned phone number digits typed into a text box. Or maybe there is a stream of events passing through, and you want to alert the user only when the latest event has some characteristics. MVVM solutions to these problems typically consist of chains of properties and change events.
+
+Copper.js offers a fluent syntax for declaring "computed observables" which will define all this for you. Computed observables are just like regular observables in that they will track subscriptions to change events for that value, and can be auto-bound to handlers on the view, or straight through to elements in the page. The prototype for these, ```Computed``` actually derives from ```Observable``` so that it works basically the same.  What distinguishes computed from normal observables is that rather than being a container for a value, they are defined to calculate their value on the fly when others change.
+
+Here's a sample for the phone number example, showing how to create a ```Computed``` as a transformation of a plain ```Observable``` using the ```as``` function.
+
+```html
+<input id="phoneDigits" type="text" />
+<span id="formattedPhone"></span>
+```
+
+```javascript
+var formatPhoneNumber = function (phoneDigits) {
+	// ... format a phone number ...
+};
+
+var phoneDigits = new Cu.Observable();
+var formattedPhone = phoneDigits.as(function (newDigits) {
+	return formatPhoneNumber(newDigits);
+});
+
+$('#phoneDigits').change(function (e) {
+	phoneDigits.val($(e.target).val());
+});
+
+formattedPhone.subscribe(function (newFormatted) {
+	$('#formattedPhone').val(newFormatted);
+});
+```
+
+Now say for example that you want to show the user their tweet size, but only up to 140 characters, where the display should sit if they go beyond that number.
+
+```html
+<input id="tweet" type="text" />
+<span id="tweetSize"></span>
+```
+
+```javascript
+var tweet = new Cu.Observable();
+var tweetSize = tweet.as(function (newTweet) {
+	var length = newVal.length;
+	return  length > 140 ? 140 : length;
+});
+
+$('#tweet').change(function (e) {
+	tweet.val($(e.target).val());
+});
+
+tweetSize.subscribe(function (newSize) {
+	$('#tweetSize').val(newSize);
+});
+```
+
+You can even chain these together. If we now wanted only to update the tweet size every 10 characters, we could add a ```when``` call before the ```as``` call.
+
+```html
+<input id="tweet" type="text" />
+<span id="tweetSize"></span>
+```
+
+```javascript
+var tweet = new Cu.Observable();
+var tweetSize = tweet.when(function (newTweet) {
+	return newTweet.size % 10 == 0;
+}).as(function (newTweet) {
+	var length = newVal.length;
+	return  length > 140 ? 140 : length;
+});
+
+$('#tweet').change(function (e) {
+	tweet.val($(e.target).val());
+});
+
+tweetSize.subscribe(function (newSize) {
+	$('#tweetSize').val(newSize);
+});
+```
+
+The real money-maker scenario, however, is when you have a set of variables in your ViewModel, and one aspect of your page reflects some logic applied to all those variables. If you make those variables observables, you can create a computed observable that is built up from those others, and changes only when one of those do.
+
+In the deposit slip example below, you can see how the total is kept up to date via a computed observable, but only when the turned on.
+
+```html
+<input id="amount1" type="text" />
+<input id="amount2" type="text" />
+<input id="amount3" type="text" />
+<input id="showTotal" type="textbox" />
+<span id="total"></span>
+```
+
+```javascript
+var amount1 = new Cu.Observable(0);
+var amount2 = new Cu.Observable(0);
+var amount3 = new Cu.Observable(0);
+var showTotal = new Cu.Observable(false);
+
+// ... Use JQuery to bind observables to inputs ...
+
+var total = mew Cu.Computed({
+	from: [amount1, amount2, amount3, showTotal],
+	when: function (amount1, amount2, amount3, showTotal) {
+		return showTotal.val();
+	},
+	as: function (amount1, amount2, amount3, showTotal) {
+		return parseFloat(amount1) + parseFloat(amount2) + parseFloat(amount3);
+	}
+});
+
+/// ... Use JQuery to bind total to span ...
+```
 
 ##ObservableCollection
 
