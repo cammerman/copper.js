@@ -376,8 +376,10 @@ Cu  = (function($, undefined) {
 			},
 			
 			_createClickCallback: function(view, propertyName) {
+				var self = this;
+				
 				return function (e) {
-					if (e.preventDefault != undefined) {
+					if (self._inputType.clickable && e.preventDefault != undefined) {
 						e.preventDefault();
 					}
 					
