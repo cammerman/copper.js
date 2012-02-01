@@ -1219,6 +1219,241 @@
 			});
 		});
 		
+		// Begin reference tests
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with name "X" / When observable becomes true / HTML input receives a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+				
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				var view = {};
+				view[referenceName] = $element;
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				// Act
+				model[propertyName].val(true);
+
+				// Assert
+				ok($element.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with name "X" / Model binding is created ', function () {
+			expect(1);
+			
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				var view = {};
+				view[referenceName] = $element;
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with name "X" and class "Y" / When observable becomes false / HTML input loses a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+			
+			givenElementWithClass($element, mode, function () {
+				givenModelWithObservableProperty(propertyName, true, function (model) {
+					var view = {};
+					view[referenceName] = $element;
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+
+					// Act
+					model[propertyName].val(false);
+
+					// Assert
+					ok(!$element.hasClass(mode));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with class "Y", and other classes / When observable becomes false / HTML input does not lost classes other than "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				extraClass = 'something',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+
+			givenElementWithClass($element, extraClass, function () {
+				givenElementWithClass($element, mode, function () {
+					givenModelWithObservableProperty(propertyName, true, function (model) {
+						var view = {};
+						view[referenceName] = $element;
+					
+						Cu.Wire({
+							model: model,
+							view: view
+						});
+
+						// Act
+						model[propertyName].val(false);
+
+						// Assert
+						ok($element.hasClass(extraClass));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of an HTML element / When observable changes / Content of HTML element selected by hashed reference is changed to match observable value', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'some awesome property',
+				id = 'dynamicContent',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(id, oldContent, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+
+					// Act
+					model[propertyName].val(newContent);
+
+					// Assert
+					equal($('#' + id).html(), newContent);
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of input in the HTML / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+					
+					
+					$('#' + id).val(newValue);
+
+					// Act
+					$('#' + id).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
+
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of input in the HTML / Input binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+										
+					assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of input in the HTML / Model binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+										
+					assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+				});
+			});
+		});
+		// End reference tests
+		
+		// Begin named reference tests
+		// TODO
+		// End named reference tests
+		
 		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view selector hash entry with name of Observable property and value of an HTML element with name "X" / When observable becomes true / HTML input receives a class of "Y"', function () {
 			expect(1);
 
@@ -1469,6 +1704,472 @@
 				});
 			});
 		});
+		
+		// Begin reference tests
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with name "X" / When observable becomes true / HTML input receives a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+				
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				var view = {};
+				view[referenceName] = $element;
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				// Act
+				model[propertyName].val(true);
+
+				// Assert
+				ok($element.hasClass(mode));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with name "X" / Model binding is created ', function () {
+			expect(1);
+			
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+				
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				var view = {};
+				view[referenceName] = $element;
+				
+				Cu.Wire({
+					model: model,
+					view: view
+				});
+
+				assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with name "X" and class "Y" / When observable becomes false / HTML input loses a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+			
+			givenElementWithClass($element, mode, function () {
+				givenModelWithObservableProperty(propertyName, true, function (model) {
+					var view = {};
+					view[referenceName] = $element;
+				
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+
+					// Act
+					model[propertyName].val(false);
+
+					// Assert
+					ok(!$element.hasClass(mode));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view reference entry with name of Observable property and value of an HTML element with class "Y", and other classes / When observable becomes false / HTML input does not lost classes other than "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				extraClass = 'something',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+
+			givenElementWithClass($element, extraClass, function () {
+				givenElementWithClass($element, mode, function () {
+					givenModelWithObservableProperty(propertyName, true, function (model) {
+						var view = {};
+						view[referenceName] = $element;
+					
+						Cu.Wire({
+							model: model,
+							view: view
+						});
+
+						// Act
+						model[propertyName].val(false);
+
+						// Assert
+						ok($element.hasClass(extraClass));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of an HTML element / When observable changes / Content of HTML element selected by hashed reference is changed to match observable value', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'some awesome property',
+				id = 'dynamicContent',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(id, oldContent, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+
+					// Act
+					model[propertyName].val(newContent);
+
+					// Assert
+					equal($('#' + id).html(), newContent);
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of input in the HTML / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+					
+					
+					$('#' + id).val(newValue);
+
+					// Act
+					$('#' + id).trigger('change');
+
+					// Assert
+					equal(model[propertyName].val(), newValue);
+				});
+			});
+		});
+
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of input in the HTML / Input binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+										
+					assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view reference entry with name of Observable property and value of input in the HTML / Model binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					var view = {};
+					view[propertyName] = $('#' + id);
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+										
+					assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+				});
+			});
+		});
+		// End reference tests
+		
+		// Begin named reference tests
+		var givenViewWithReferenceFor = function (propertyName, $element, continueTest) {
+			var referenceFor = {};
+			
+			referenceFor[propertyName] = $element;
+			
+			continueTest({
+				referenceFor: referenceFor
+			});
+		};
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view named reference entry with name of Observable property and value of an HTML element with name "X" / When observable becomes true / HTML input receives a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+				
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				givenViewWithReferenceFor(referenceName, $element, function (view) {
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+
+					// Act
+					model[propertyName].val(true);
+
+					// Assert
+					ok($element.hasClass(mode));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view named reference entry with name of Observable property and value of an HTML element with name "X" / Model binding is created ', function () {
+			expect(1);
+			
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+				
+			givenModelWithObservableProperty(propertyName, false, function (model) {
+				givenViewWithReferenceFor(referenceName, $element, function (view) {
+					
+					Cu.Wire({
+						model: model,
+						view: view
+					});
+
+					assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view named reference entry with name of Observable property and value of an HTML element with name "X" and class "Y" / When observable becomes false / HTML input loses a class of "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+			
+			givenElementWithClass($element, mode, function () {
+				givenModelWithObservableProperty(propertyName, true, function (model) {
+					givenViewWithReferenceFor(referenceName, $element, function (view) {				
+						Cu.Wire({
+							model: model,
+							view: view
+						});
+
+						// Act
+						model[propertyName].val(false);
+
+						// Assert
+						ok(!$element.hasClass(mode));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property with name in the format "X_Is_Y" / Given a view named reference entry with name of Observable property and value of an HTML element with class "Y", and other classes / When observable becomes false / HTML input does not lost classes other than "Y"', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				elementId = 'modalElement',
+				$element = $('#' + elementId),
+				mode = 'Changed',
+				extraClass = 'something',
+				referenceName = 'overreaction',
+				propertyName = referenceName + '_Is_' + mode;
+
+			givenElementWithClass($element, extraClass, function () {
+				givenElementWithClass($element, mode, function () {
+					givenModelWithObservableProperty(propertyName, true, function (model) {
+						givenViewWithReferenceFor(referenceName, $element, function (view) {
+						
+							Cu.Wire({
+								model: model,
+								view: view
+							});
+
+							// Act
+							model[propertyName].val(false);
+
+							// Assert
+							ok($element.hasClass(extraClass));
+						});
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view named reference entry with name of Observable property and value of an HTML element / When observable changes / Content of HTML element selected by hashed reference is changed to match observable value', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'some awesome property',
+				id = 'dynamicContent',
+				initialValue = 'blah',
+				oldContent = 'Something unremarkable',
+				newContent = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(id, oldContent, function () {
+					givenViewWithReferenceFor(propertyName, $('#' + id), function (view) {
+						Cu.Wire({
+							model: model,
+							view: view
+						});
+
+						// Act
+						model[propertyName].val(newContent);
+
+						// Assert
+						equal($('#' + id).html(), newContent);
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view named reference entry with name of Observable property and value of input in the HTML / When input changes / Observable value is changed to match value of input', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					givenViewWithReferenceFor(propertyName, $('#' + id), function (view) {
+						Cu.Wire({
+							model: model,
+							view: view
+						});
+						
+						$('#' + id).val(newValue);
+
+						// Act
+						$('#' + id).trigger('change');
+
+						// Assert
+						equal(model[propertyName].val(), newValue);
+					});
+				});
+			});
+		});
+
+		test('Given a model with an Observable property / Given a view named reference entry with name of Observable property and value of input in the HTML / Input binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					givenViewWithReferenceFor(propertyName, $('#' + id), function (view) {
+						Cu.Wire({
+							model: model,
+							view: view
+						});
+											
+						assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
+					});
+				});
+			});
+		});
+		
+		test('Given a model with an Observable property / Given a view named reference entry with name of Observable property and value of input in the HTML / Model binding is created ', function () {
+			expect(1);
+
+			// Arrange
+			var called = false,
+				propertyName = 'something crazy',
+				id = 'dynamicInput',
+				initialValue = 'blah',
+				oldValue = 'Something unremarkable',
+				newValue = 'Something super special and important.';
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(id, oldValue, function () {
+					givenViewWithReferenceFor(propertyName, $('#' + id), function (view) {
+						Cu.Wire({
+							model: model,
+							view: view
+						});
+											
+						assertModelBindingExists(view, propertyName, modelChangeHandlerName(propertyName));
+					});
+				});
+			});
+		});
+		// End named reference tests
 		
 		test('Given a model with an Observable property with name the same as the ID of an input in the HTML / When input changes / Observable value is changed to match value of input', function () {
 			expect(1);

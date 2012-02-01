@@ -15,7 +15,32 @@ Cu  = (function($, undefined) {
 		BindPipeline,
 		ModelPropertyBindPipeline,
 		Extender,
-		Conventions;
+		Conventions,
+		Select;
+	
+	Select = (function () {
+		var construct = function() {};
+	
+		construct.prototype = {
+			inScope: function ($scope, selector) {
+				if (selector === undefined) {
+					return undefined;
+				}
+
+				if ($scope) {
+					return $scope.find(selector).add($scope.filter(selector))
+				}
+
+				return $(selector);
+			},
+
+			inView: function (view, id) {
+				return this.inScope(view.$documentScope, '#' + id);
+			}
+		};
+		
+		return new construct();
+	})();
 	
 	Extender = {
 		extend: function (target, source, preserveExisting) {
@@ -533,22 +558,6 @@ Cu  = (function($, undefined) {
 			
 			_isCheckable: function ($element) {
 				return $element.is(Conventions.checkableSelector);
-			},
-
-			_select: function ($scope, selector) {
-				if (selector === undefined) {
-					return undefined;
-				}
-
-				if ($scope) {
-					return $scope.find(selector).add($scope.filter(selector))
-				}
-
-				return $(selector);
-			},
-
-			_findViewElement: function (view, id) {
-				return this._select(view.$documentScope, '#' + id);
 			}
 		};
 
@@ -639,17 +648,25 @@ Cu  = (function($, undefined) {
 			},
 			
 			_findBindableElement: function (view, propertyName) {
-				throw new BindPipelineStepException({
-					message: 'Element selector is not implemented.',
-					subject: view.$documentScope,
-					member: member || this._selector
-				});
+				var conventionIndex = 0,
+					$element;
+				
+				while (conventionIndex < FindBindableElementPipeline.length && !this._elementFound($element)) {
+					$element = FindBindableElementPipeline[conventionIndex](view, propertyName);
+					++conventionIndex;
+				}
+				
+				return $element;
+			},
+			
+			_elementFound: function ($element) {
+				return $element && $element.length > 0;
 			},
 			
 			_tryBindElement: function (view, model, propertyName) {
-				$element = this._findBindableElement(view, propertyName);
-
-				if ($element && $element.length > 0) {
+				var $element = this._findBindableElement(view, propertyName);
+				
+				if (this._elementFound($element)) {
 					if (this._tryBindInputToObservableProperty(view, model, $element, propertyName)) {
 						return true;
 					}
@@ -692,47 +709,67 @@ Cu  = (function($, undefined) {
 		return construct;
 	})();
 	
-	var BindModelObservablePropertyToInputBySelector = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToInput({
-		
-			_findBindableElement: function (view, propertyName) {
-				return this._select(view.$documentScope, view.selectorFor[propertyName]);
+	var FindBindableElement = {
+		byReference: function(view, propertyName) {
+			var reference = view[propertyName];
+			
+			if (reference instanceof jQuery) {
+				return reference;
 			}
-		});
+			
+			return null;
+		},
 		
-		return construct;
-	})();
-	
-	var BindModelObservablePropertyToInputById = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToInput({
-		
-			_findBindableElement: function (view, propertyName) {
-				return this._findViewElement(view, propertyName);
+		byNamedReference: function(view, propertyName) {
+			var reference;
+			
+			if (!view.referenceFor) {
+				return null;
 			}
-		});
-		
-		return construct;
-	})();
-	
-	var BindModelObservablePropertyToInputByName = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToInput({
-		
-			_findBindableElement: function (view, propertyName) {
-				return this._select(view.$documentScope, 'input[name="' + propertyName + '"]');
+			
+			reference = view.referenceFor[propertyName];
+			
+			if (reference instanceof jQuery) {
+				return reference;
 			}
-		});
+			
+			return null;
+		},
 		
-		return construct;
-	})();
+		bySelector: function(view, propertyName) {
+			if (!view.selectorFor) {
+				return null;
+			}
+			
+			return Select.inScope(view.$documentScope, view.selectorFor[propertyName]);
+		},
+		
+		byId: function (view, propertyName) {
+			return Select.inView(view, propertyName);
+		},
+		
+		byName: function (view, propertyName) {
+			return Select.inScope(view.$documentScope, 'input[name="' + propertyName + '"]');
+		}
+	};
 	
-	// New code
+	// TODO: Consolidate both directions of each convention.
 	
+	var FindBindableContentElementPipeline = [
+		FindBindableElement.byReference,
+		FindBindableElement.byNamedReference,
+		FindBindableElement.bySelector,
+		FindBindableElement.byId
+	];
+	
+	var FindBindableElementPipeline = [
+		FindBindableElement.byReference,
+		FindBindableElement.byNamedReference,
+		FindBindableElement.bySelector,
+		FindBindableElement.byId,
+		FindBindableElement.byName
+	];
+
 	var BindModelObservablePropertyToClass = (function () {
 		var construct = function (strategy) {
 			Extender.extend(this, strategy);
@@ -751,12 +788,20 @@ Cu  = (function($, undefined) {
 				return false;
 			},
 			
+			_elementFound: function ($element) {
+				return $element && $element.length > 0;
+			},
+			
 			_findBindableElement: function (view, propertyNameId) {
-				throw new BindPipelineStepException({
-					message: 'Element selector is not implemented.',
-					subject: view.$documentScope,
-					member: member || this._selector
-				});
+				var conventionIndex = 0,
+					$element;
+				
+				while (conventionIndex < FindBindableElementPipeline.length && !this._elementFound($element)) {
+					$element = FindBindableElementPipeline[conventionIndex](view, propertyNameId);
+					++conventionIndex;
+				}
+				
+				return $element;
 			},
 			
 			_tryBindElement: function (view, model, propertyName) {
@@ -813,47 +858,6 @@ Cu  = (function($, undefined) {
 		return construct;
 	})();
 	
-	var BindModelObservablePropertyToClassBySelector = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToClass({
-		
-			_findBindableElement: function (view, propertyNameId) {
-				return this._select(view.$documentScope, view.selectorFor[propertyNameId]);
-			}
-		});
-		
-		return construct;
-	})();
-	
-	var BindModelObservablePropertyToClassById = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToClass({
-		
-			_findBindableElement: function (view, propertyNameId) {
-				return this._findViewElement(view, propertyNameId);
-			}
-		});
-		
-		return construct;
-	})();
-	
-	var BindModelObservablePropertyToClassByName = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToClass({
-		
-			_findBindableElement: function (view, propertyNameId) {
-				return this._select(view.$documentScope, 'input[name="' + propertyNameId + '"]');
-			}
-		});
-		
-		return construct;
-	})();
-	
-	// End new code
-	
 	var BindModelObservablePropertyToContent = (function () {
 		var construct = function (strategy) {
 			Extender.extend(this, strategy);
@@ -861,12 +865,20 @@ Cu  = (function($, undefined) {
 		
 		construct.prototype = new BindModelPropertyStep({
 		
-			_findBindableElement: function (view, propertyName) {
-				throw new BindPipelineStepException({
-					message: 'Element selector is not implemented.',
-					subject: view.$documentScope,
-					member: member || this._selector
-				});
+			_elementFound: function ($element) {
+				return $element && $element.length > 0;
+			},
+			
+			_findBindableElement: function (view, propertyNameId) {
+				var conventionIndex = 0,
+					$element;
+				
+				while (conventionIndex < FindBindableContentElementPipeline.length && !this._elementFound($element)) {
+					$element = FindBindableContentElementPipeline[conventionIndex](view, propertyNameId);
+					++conventionIndex;
+				}
+				
+				return $element;
 			},
 			
 			tryBindProperty: function (view, model, propertyName) {
@@ -907,30 +919,6 @@ Cu  = (function($, undefined) {
 				binding.bind(propertyName, handlerName);
 				
 				view._modelBindings.push(binding);
-			}
-		});
-		
-		return construct;
-	})();
-	
-	var BindModelObservablePropertyToContentById = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToContent({
-			_findBindableElement: function (view, propertyName) {
-				return this._findViewElement(view, propertyName);
-			}
-		});
-		
-		return construct;
-	})();
-	
-	var BindModelObservablePropertyToContentBySelector = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelObservablePropertyToContent({
-			_findBindableElement: function (view, propertyName) {
-				return this._select(view.$documentScope, view.selectorFor[propertyName]);
 			}
 		});
 		
@@ -1077,6 +1065,14 @@ Cu  = (function($, undefined) {
 		return construct;
 	})();
 	
+	var FindBindableClickableElementPipeline = [
+		FindBindableElement.byReference,
+		FindBindableElement.byNamedReference,
+		FindBindableElement.bySelector,
+		FindBindableElement.byId,
+		FindBindableElement.byName
+	];
+	
 	var BindModelFunctionPropertyToClickable = (function () {
 		var construct = function (strategy) {
 			Extender.extend(this, strategy);
@@ -1085,11 +1081,19 @@ Cu  = (function($, undefined) {
 		construct.prototype = new BindModelPropertyStep({
 		
 			_findBindableElement: function (view, propertyName) {
-				throw new BindPipelineStepException({
-					message: 'Element selector is not implemented.',
-					subject: view.$documentScope,
-					member: member || this._selector
-				});
+				var conventionIndex = 0,
+					$element;
+				
+				while (conventionIndex < FindBindableClickableElementPipeline.length && !this._elementFound($element)) {
+					$element = FindBindableClickableElementPipeline[conventionIndex](view, propertyName);
+					++conventionIndex;
+				}
+				
+				return $element;
+			},
+			
+			_elementFound: function ($element) {
+				return $element && $element.length > 0;
 			},
 			
 			tryBindProperty: function (view, model, propertyName) {
@@ -1137,30 +1141,6 @@ Cu  = (function($, undefined) {
 				binding.bind($element, handlerName);
 				
 				view._inputBindings.push(binding);
-			}
-		});
-		
-		return construct;
-	})();
-	
-	var BindModelFunctionPropertyToClickableBySelector = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelFunctionPropertyToClickable({
-			_findBindableElement: function (view, propertyName) {
-				return this._select(view.$documentScope, view.selectorFor[propertyName]);
-			}
-		});
-		
-		return construct;
-	})();
-	
-	var BindModelFunctionPropertyToClickableById = (function () {
-		var construct = function () { };
-		
-		construct.prototype = new BindModelFunctionPropertyToClickable({
-			_findBindableElement: function (view, propertyName) {
-				return this._findViewElement(view, propertyName);
 			}
 		});
 		
@@ -1225,18 +1205,12 @@ Cu  = (function($, undefined) {
 	
 	ModelPropertyBindPipeline = [
 		new BindModelObservablePropertyToViewHandler(),
-		new BindModelObservablePropertyToInputBySelector(),
-		new BindModelObservablePropertyToInputById(),
-		new BindModelObservablePropertyToInputByName(),
-		new BindModelObservablePropertyToClassBySelector(),
-		new BindModelObservablePropertyToClassById(),
-		new BindModelObservablePropertyToClassByName(),
-		new BindModelObservablePropertyToContentBySelector(),
-		new BindModelObservablePropertyToContentById(),
+		new BindModelObservablePropertyToInput(),
+		new BindModelObservablePropertyToClass(),
+		new BindModelObservablePropertyToContent(),
 		new BindModelObservablePropertyToInputScope(),
 		new BindModelObservablePropertyToInputContent(),
-		new BindModelFunctionPropertyToClickableBySelector(),
-		new BindModelFunctionPropertyToClickableById(),
+		new BindModelFunctionPropertyToClickable(),
 		new BindModelFunctionPropertyToClickableScope()
 	];
 	
@@ -1264,7 +1238,7 @@ Cu  = (function($, undefined) {
 				var scope = this,
 					propertyName;
 				
-				_(scope._select(view.$documentScope, scope._selector))
+				_(Select.inScope(view.$documentScope, scope._selector))
 					.forEach(function (element) {
 						var $el = $(element),
 							alreadyBound = _(state.boundViewElements).any(function ($boundEl) {
@@ -1475,8 +1449,22 @@ Cu  = (function($, undefined) {
 				return this._tryBindInputToModel(view, $el, model);
 			},
 			
+			_propertyName: function ($element, view) {
+				var conventionIndex = 0,
+					propertyName;
+				
+				while (conventionIndex < FindBindablePropertyNamePipeline.length && (propertyName === null || propertyName === undefined)) {
+					propertyName = FindBindablePropertyNamePipeline[conventionIndex]($element, view);
+					++conventionIndex;
+				}
+				
+				return propertyName;
+			},
+			
 			_tryBindInputToModel: function (view, $element, model) {
+				
 				var propertyName = this._propertyName($element, view);
+				
 				var property = model[propertyName];
 
 				if (propertyName != undefined && property != undefined) {
@@ -1548,53 +1536,72 @@ Cu  = (function($, undefined) {
 		return construct;
 	})();
 	
-	var BindInputsToModelBySelectorStep = (function () {
-		var construct = function () {
-		};
-		
-		construct.prototype = new BindInputsToModelStep({
-			_propertyName: function ($element, view) {
-				var selectorFor = view.selectorFor,
-					property;
+	var FindBindablePropertyName = {
+		byReference: function ($element, view) {
+			var propertyName,
+				reference;
+			
+			for (propertyName in view) {
+				reference = view[propertyName];
 				
-				for (property in view.selectorFor) {
-					if ($element.is(selectorFor[property])) {
-						return property;
-					}
+				if (reference instanceof jQuery && $element.is(reference)) {
+					return propertyName;
 				}
+			}
 
-				return undefined;
-			}
-		});
+			return undefined;
+		},
 		
-		return construct;
-	})();
+		byNamedReference: function ($element, view) {
+			var propertyName,
+				reference;
+			
+			if (!view.referenceFor) {
+				return null;
+			}
+			
+			for (propertyName in view.referenceFor) {
+				reference = view.referenceFor[propertyName];
+				
+				if (reference instanceof jQuery && $element.is(reference)) {
+					return propertyName;
+				}
+			}
+
+			return undefined;
+		},
+		
+		bySelector: function ($element, view) {
+			var selectorFor = view.selectorFor,
+				propertyName;
+			
+			for (propertyName in view.selectorFor) {
+				if ($element.is(selectorFor[propertyName])) {
+					return propertyName;
+				}
+			}
+
+			return undefined;
+		},
+		
+		byId: function ($element, view) {
+			return $element.attr('id');
+		},
+		
+		byName: function ($element, view) {
+			return $element.attr('name');
+		}
+	};
 	
-	var BindInputsToModelByIdStep = (function () {
-		var construct = function () {
-		};
-		
-		construct.prototype = new BindInputsToModelStep({
-			_propertyName: function ($element, view) {
-				return $element.attr('id');
-			}
-		});
-		
-		return construct;
-	})();
+	// TODO: Consolidate both directions of each convention.
 	
-	var BindInputsToModelByNameStep = (function () {
-		var construct = function () {
-		};
-		
-		construct.prototype = new BindInputsToModelStep({
-			_propertyName: function ($element, view) {
-				return $element.attr('name');
-			}
-		});
-		
-		return construct;
-	})();
+	var FindBindablePropertyNamePipeline = [
+		FindBindablePropertyName.byReference,
+		FindBindablePropertyName.byNamedReference,
+		FindBindablePropertyName.bySelector,
+		FindBindablePropertyName.byId,
+		FindBindablePropertyName.byName
+	];
 	
 	var BindClickablesToViewHandlersStep = (function () {
 		var construct = function () {
@@ -1703,9 +1710,7 @@ Cu  = (function($, undefined) {
 			new BindInputsByNameToViewHandlersStep(),
 			new BindClickablesToViewHandlersStep(),
 			new BindModelPropertiesStep(),
-			new BindInputsToModelBySelectorStep(),
-			new BindInputsToModelByIdStep(),
-			new BindInputsToModelByNameStep(),
+			new BindInputsToModelStep(),
 			new BindViewScopeElementToModelStep(),
 			new BindModelDirectlyStep(),
 			new AddAutoSyncronization()
