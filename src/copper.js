@@ -230,7 +230,9 @@ Cu  = (function($, undefined) {
 
 			if (init.from instanceof Array) {
 				scope._dependentOn = init.from;
-			} else {
+			} else if (init.from === undefined || init.from === null)
+				scope._dependentOn = [];
+			else {
 				scope._dependentOn = [init.from];
 			}
 
@@ -459,7 +461,7 @@ Cu  = (function($, undefined) {
 		};
 		
 		construct.prototype = {
-			_createClickCallback: function(view, propertyName) {
+			_createClickCallback: function (view, propertyName) {
 				return function (e) {
 					if (e.preventDefault != undefined) {
 						e.preventDefault();
@@ -893,9 +895,9 @@ Cu  = (function($, undefined) {
 			},
 						
 			_bindContent: function (view, model, $element, propertyName) {
-				var	callback = function (newValue) {
-						$element.html(newValue);
-					},
+				var callback = function (newValue) {
+					$element.html(newValue);
+				},
 					handlerName = propertyName + '_ModelChanged',
 					binding;
 
@@ -1264,9 +1266,12 @@ Cu  = (function($, undefined) {
 				
 				_(scope._select(view.$documentScope, scope._selector))
 					.forEach(function (element) {
-						var $el = $(element);
-						
-						if (!_(state.boundViewProperties).include($el)) {
+						var $el = $(element),
+							alreadyBound = _(state.boundViewElements).any(function ($boundEl) {
+								return $el.is($boundEl);
+							});
+
+						if (!alreadyBound) {
 							if (scope._tryBindElement(view, model, $el)) {
 								state.boundViewElements.push($el);
 							}
@@ -1556,9 +1561,9 @@ Cu  = (function($, undefined) {
 					if ($element.is(selectorFor[property])) {
 						return property;
 					}
-					
-					return undefined;
 				}
+
+				return undefined;
 			}
 		});
 		
