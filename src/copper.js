@@ -2,7 +2,7 @@
     copper.js
     Author: Chris Ammerman
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
-    Version 0.7
+    Version 0.8
 */
 Cu  = (function($, undefined) {
 	var Observable,
