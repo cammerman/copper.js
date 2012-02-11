@@ -2845,10 +2845,11 @@
 			assertInputBindingExists(view, '#' + propertyName, handlerName);
 		});
 		
+		module('Post-wiring initialization');
+		
 		test('Given an observable bound to an input / When syncronizeFromModel called / Input receives observable value. ', function () {
 
-			var called = false,
-				propertyName = 'dynamicInput',
+			var propertyName = 'dynamicInput',
 				initialValue = 'blah',
 				oldContent = 'Something unremarkable';
 
@@ -2865,8 +2866,7 @@
 		
 		test('Given an observable bound to an input / When syncronizeFromInputs called / Observable receives input value. ', function () {
 
-			var called = false,
-				propertyName = 'dynamicInput',
+			var propertyName = 'dynamicInput',
 				initialValue = 'blah',
 				inputContent = 'Something unremarkable';
 
@@ -2883,8 +2883,7 @@
 		
 		test('Given an observable bound to an input / When initializeFromModel called / Input receives observable value. ', function () {
 
-			var called = false,
-				propertyName = 'dynamicInput',
+			var propertyName = 'dynamicInput',
 				initialValue = 'blah',
 				oldContent = 'Something unremarkable';
 
@@ -2902,8 +2901,7 @@
 		
 		test('Given an observable bound to an input / When initializeFromInputs called / Observable receives input value. ', function () {
 
-			var called = false,
-				propertyName = 'dynamicInput',
+			var propertyName = 'dynamicInput',
 				initialValue = 'blah',
 				inputContent = 'Something unremarkable';
 
@@ -2918,5 +2916,57 @@
 				});
 			});
 		});
+		
+		module('Binding pipelines');
+		
+		test('Given an observable property named to match an input ID / Given a differently named view reference to the element / Input binding is created. ', function () {
+			
+			var propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				inputContent = 'Something unremarkable',
+				handlerName = handlerNameFromInput(propertyName);
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, inputContent, function () {
+					var view = {
+						preempt: $('#' + propertyName)
+					};
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					});
+			
+					assertInputBindingExists(view, '#' + propertyName, handlerName);
+				});
+			});
+		});
+		
+		test('Given an observable property named to match an input ID / Given a differently named view reference to the element / Input binding is created. ', function () {
+			
+			var propertyName = 'dynamicInput',
+				initialValue = 'blah',
+				inputContent = 'Something unremarkable',
+				handlerName = handlerNameFromInput(propertyName);
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, inputContent, function () {
+					var view = {
+						preempt: $('#' + propertyName)
+					};
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					});
+		
+					assertModelBindingExists(view, propertyName, handlerName);
+				});
+			});
+		});
+		
+		// Test bind model observable to content. Use checkable element as view reference.
+		
+		// Test bind model function to clickable. Use non-clickable element as view reference.
 	</script>
 </html>
