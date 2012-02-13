@@ -21,6 +21,7 @@
 			<input id="helloInputSubmit" type="submit" />
 			<input id="helloInputButton" type="button" />
 			<input id="helloInputReset" type="reset" />
+			<input id="checkable" type="checkbox" />
 			<p id="dynamicContent"></p>
 			<p id="dynamicClass"></p>
 			<input id="dynamicInput" type="text" />
@@ -2942,7 +2943,7 @@
 			});
 		});
 		
-		test('Given an observable property named to match an input ID / Given a differently named view reference to the element / Input binding is created. ', function () {
+		test('Given an observable property named to match an input ID / Given a differently named view reference to the element / Model binding is created. ', function () {
 			
 			var propertyName = 'dynamicInput',
 				initialValue = 'blah',
@@ -2965,8 +2966,75 @@
 			});
 		});
 		
-		// Test bind model observable to content. Use checkable element as view reference.
+		test('Given an observable property named to match a content element ID / Given a same-named view reference to a checkable element / Content model binding is created. ', function () {
+			
+			var propertyName = 'dynamicContent',
+				initialValue = 'blah',
+				content = 'Something unremarkable',
+				handlerName = handlerNameFromInput(propertyName);
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(propertyName, content, function () {
+					var view = {};
+					view[propertyName] = $('#checkable'); 
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					});
 		
-		// Test bind model function to clickable. Use non-clickable element as view reference.
+					assertModelBindingExists(view, propertyName, handlerName);
+				});
+			});
+		});
+		
+		test('Given an observable property named to match a clickable element ID / Given a same-named view reference to a non-clickable element / Content model binding is created. ', function () {
+			
+			var propertyName = 'helloInputSubmit',
+				unclickableId = '#dynamicContent',
+				initialValue = 'blah',
+				content = 'Something unremarkable',
+				handlerName = handlerNameFromInput(propertyName);
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenTagWithIdContainsText(propertyName, content, function () {
+					var view = {};
+					view[propertyName] = $(unclickableId); 
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					});
+		
+					assertModelBindingExists(view, propertyName, handlerName);
+				});
+			});
+		});
+				
+				test('Given an observable property named to match an input ID / Given a differently named view reference to a non-input element / Model binding is created. ', function () {
+			
+			var propertyName = 'dynamicInput',
+				nonInputId = '#dynamicContent',
+				initialValue = 'blah',
+				inputContent = 'Something unremarkable',
+				handlerName = handlerNameFromInput(propertyName);
+
+			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
+				givenInputWithIdHasValue(propertyName, inputContent, function () {
+					var view = {
+						preempt: $(nonInputId)
+					};
+					
+					Cu.Wire({
+						view: view,
+						model: model
+					});
+		
+					assertModelBindingExists(view, propertyName, handlerName);
+				});
+			});
+		});
+		// Test bind model to input. Use non-input element as view reference.
+		
 	</script>
 </html>
