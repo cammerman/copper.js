@@ -2,7 +2,7 @@
     copper.js
     Author: Chris Ammerman
     License: New BSD License (http://www.opensource.org/licenses/bsd-license.php)
-    Version 0.8
+    Version 0.9
 */
 Cu  = (function($, undefined) {
 	var Observable,
@@ -19,8 +19,8 @@ Cu  = (function($, undefined) {
 		Select;
 	
 	Select = (function () {
-		var construct = function() {};
-	
+		var construct = function () { };
+
 		construct.prototype = {
 			inScope: function ($scope, selector) {
 				if (selector === undefined) {
@@ -580,7 +580,7 @@ Cu  = (function($, undefined) {
 		};
 		
 		construct.prototype = new BindPipelineStep({
-			tryBindProperty: function(view, model, propertyName) {
+			tryBindProperty: function (view, model, propertyName) {
 				throw new BindPipelineStepException({
 					message: 'Model property binding step is not implemented.',
 					subject: model,
@@ -646,30 +646,26 @@ Cu  = (function($, undefined) {
 				
 				return false;
 			},
-			
-			_findBindableElement: function (view, propertyName) {
-				var conventionIndex = 0,
-					$element;
-				
-				while (conventionIndex < FindBindableElementPipeline.length && !this._elementFound($element)) {
-					$element = FindBindableElementPipeline[conventionIndex](view, propertyName);
-					++conventionIndex;
-				}
-				
-				return $element;
-			},
-			
+
 			_elementFound: function ($element) {
 				return $element && $element.length > 0;
 			},
 			
 			_tryBindElement: function (view, model, propertyName) {
-				var $element = this._findBindableElement(view, propertyName);
-				
-				if (this._elementFound($element)) {
-					if (this._tryBindInputToObservableProperty(view, model, $element, propertyName)) {
-						return true;
+				var conventionIndex = 0,
+					$element,
+					found = false;
+
+				while (conventionIndex < FindBindableElementPipeline.length) {
+					$element = FindBindableElementPipeline[conventionIndex](view, propertyName);
+
+					if (this._elementFound($element)) {
+						if (this._tryBindInputToObservableProperty(view, model, $element, propertyName)) {
+							return true;
+						}
 					}
+
+					++conventionIndex;
 				}
 
 				return false;
@@ -791,34 +787,28 @@ Cu  = (function($, undefined) {
 			_elementFound: function ($element) {
 				return $element && $element.length > 0;
 			},
-			
-			_findBindableElement: function (view, propertyNameId) {
-				var conventionIndex = 0,
-					$element;
-				
-				while (conventionIndex < FindBindableElementPipeline.length && !this._elementFound($element)) {
-					$element = FindBindableElementPipeline[conventionIndex](view, propertyNameId);
-					++conventionIndex;
-				}
-				
-				return $element;
-			},
-			
+
 			_tryBindElement: function (view, model, propertyName) {
 				var $element,
 					lengthOfId = propertyName.indexOf('_Is_'),
 					startOfClass = lengthOfId + 4,
 					id,
-					mode;
-				
+					mode,
+					conventionIndex = 0;
+
 				if (lengthOfId > 0 && startOfClass < propertyName.length) {
 					id = propertyName.substr(0, lengthOfId);
-					$element = this._findBindableElement(view, id);
 
-					if ($element && $element.length > 0) {
-						if (this._tryBindClassToObservableProperty(view, model, $element, propertyName, startOfClass)) {
-							return true;
+					while (conventionIndex < FindBindableElementPipeline.length) {
+						$element = FindBindableElementPipeline[conventionIndex](view, id);
+
+						if (this._elementFound($element)) {
+							if (this._tryBindClassToObservableProperty(view, model, $element, propertyName, startOfClass)) {
+								return true;
+							}
 						}
+
+						++conventionIndex;
 					}
 				}
 
@@ -868,19 +858,7 @@ Cu  = (function($, undefined) {
 			_elementFound: function ($element) {
 				return $element && $element.length > 0;
 			},
-			
-			_findBindableElement: function (view, propertyNameId) {
-				var conventionIndex = 0,
-					$element;
-				
-				while (conventionIndex < FindBindableContentElementPipeline.length && !this._elementFound($element)) {
-					$element = FindBindableContentElementPipeline[conventionIndex](view, propertyNameId);
-					++conventionIndex;
-				}
-				
-				return $element;
-			},
-			
+
 			tryBindProperty: function (view, model, propertyName) {
 				var property = model[propertyName],
 					handler;
@@ -893,14 +871,21 @@ Cu  = (function($, undefined) {
 			},
 			
 			_tryBindElement: function (view, model, propertyName) {
-				$element = this._findBindableElement(view, propertyName);
+				var conventionIndex = 0,
+					$element;
 
-				if ($element && $element.length > 0) {
-					if (!this._isInput($element) && !this._isCheckable($element)) {
-						this._bindContent(view, model, $element, propertyName);
-						
-						return true;
+				while (conventionIndex < FindBindableContentElementPipeline.length) {
+					$element = FindBindableContentElementPipeline[conventionIndex](view, propertyName);
+
+					if (this._elementFound($element)) {
+						if (!this._isInput($element) && !this._isCheckable($element)) {
+							this._bindContent(view, model, $element, propertyName);
+
+							return true;
+						}
 					}
+
+					++conventionIndex;
 				}
 
 				return false;
@@ -1079,21 +1064,8 @@ Cu  = (function($, undefined) {
 		};
 		
 		construct.prototype = new BindModelPropertyStep({
-		
-			_findBindableElement: function (view, propertyName) {
-				var conventionIndex = 0,
-					$element;
-				
-				while (conventionIndex < FindBindableClickableElementPipeline.length && !this._elementFound($element)) {
-					$element = FindBindableClickableElementPipeline[conventionIndex](view, propertyName);
-					++conventionIndex;
-				}
-				
-				return $element;
-			},
-			
 			_elementFound: function ($element) {
-				return $element && $element.length > 0;
+				return $element && $element.length > 0 && this._isClickable($element);
 			},
 			
 			tryBindProperty: function (view, model, propertyName) {
@@ -1116,11 +1088,18 @@ Cu  = (function($, undefined) {
 			},
 			
 			_tryBindClick: function (view, propertyName, callback) {
-				$element = this._findBindableElement(view, propertyName);
+				var conventionIndex = 0,
+					$element;
 
-				if ($element && $element.length > 0 && this._isClickable($element)) {
-					this._bindClick(view, $element, propertyName, callback);
-					return true;
+				while (conventionIndex < FindBindableClickableElementPipeline.length) {
+					$element = FindBindableClickableElementPipeline[conventionIndex](view, propertyName);
+
+					if (this._elementFound($element)) {
+						this._bindClick(view, $element, propertyName, callback);
+						return true;
+					}
+
+					++conventionIndex;
 				}
 
 				return false;
@@ -1448,33 +1427,28 @@ Cu  = (function($, undefined) {
 			_tryBindElement: function (view, model, $el) {
 				return this._tryBindInputToModel(view, $el, model);
 			},
-			
-			_propertyName: function ($element, view) {
-				var conventionIndex = 0,
-					propertyName;
-				
-				while (conventionIndex < FindBindablePropertyNamePipeline.length && (propertyName === null || propertyName === undefined)) {
-					propertyName = FindBindablePropertyNamePipeline[conventionIndex]($element, view);
-					++conventionIndex;
-				}
-				
-				return propertyName;
-			},
-			
-			_tryBindInputToModel: function (view, $element, model) {
-				
-				var propertyName = this._propertyName($element, view);
-				
-				var property = model[propertyName];
 
-				if (propertyName != undefined && property != undefined) {
-					if (property instanceof Observable) {
-						this._bindOvervablePropertyToInput(view, $element, property, propertyName);
-						return true;
-					} else if (typeof property != 'function') {
-						this._bindSimplePropertyToInput(view, $element, model, propertyName);
-						return true;
+			_tryBindInputToModel: function (view, $element, model) {
+				var conventionIndex = 0,
+					propertyName,
+					property;
+
+				while (conventionIndex < FindBindablePropertyNamePipeline.length) {
+					propertyName = FindBindablePropertyNamePipeline[conventionIndex]($element, view);
+
+					property = model[propertyName];
+
+					if (propertyName != undefined && property != undefined) {
+						if (property instanceof Observable) {
+							this._bindOvervablePropertyToInput(view, $element, property, propertyName);
+							return true;
+						} else if (typeof property != 'function') {
+							this._bindSimplePropertyToInput(view, $element, model, propertyName);
+							return true;
+						}
 					}
+
+					++conventionIndex;
 				}
 
 				return false;

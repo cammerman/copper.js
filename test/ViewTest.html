@@ -662,7 +662,7 @@
 			return clickableName + '_Clicked';
 		};
 		
-		var handlerNameFromInput = function (inputName) {
+		var viewHandlerNameFromInput = function (inputName) {
 			return inputName + '_ViewChanged';
 		};
 		
@@ -1011,7 +1011,7 @@
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenTagWithIdContainsText(propertyName, oldContent, function () {
 					givenBlankViewBoundToModel(model, function (view) {
-						assertInputBindingExists(view, '#' + propertyName, handlerNameFromInput(propertyName));
+						assertInputBindingExists(view, '#' + propertyName, viewHandlerNameFromInput(propertyName));
 					});
 				});
 			});
@@ -1419,7 +1419,7 @@
 						view: view
 					});
 										
-					assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
+					assertInputBindingExists(view, '#' + id, viewHandlerNameFromInput(propertyName));
 				});
 			});
 		});
@@ -1671,7 +1671,7 @@
 						view: view
 					});
 										
-					assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
+					assertInputBindingExists(view, '#' + id, viewHandlerNameFromInput(propertyName));
 				});
 			});
 		});
@@ -1905,7 +1905,7 @@
 						view: view
 					});
 										
-					assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
+					assertInputBindingExists(view, '#' + id, viewHandlerNameFromInput(propertyName));
 				});
 			});
 		});
@@ -2140,7 +2140,7 @@
 							view: view
 						});
 											
-						assertInputBindingExists(view, '#' + id, handlerNameFromInput(propertyName));
+						assertInputBindingExists(view, '#' + id, viewHandlerNameFromInput(propertyName));
 					});
 				});
 			});
@@ -2208,7 +2208,7 @@
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
 					givenBlankViewBoundToModel(model, function (view) {
-						assertInputBindingExists(view, '#' + propertyName, handlerNameFromInput(propertyName));
+						assertInputBindingExists(view, '#' + propertyName, viewHandlerNameFromInput(propertyName));
 					});
 				});
 			});
@@ -2268,7 +2268,7 @@
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, oldValue, function () {
 					givenBlankViewBoundToModel(model, function (view) {
-						assertInputBindingExists(view, '#' + propertyName, handlerNameFromInput(propertyName));
+						assertInputBindingExists(view, '#' + propertyName, viewHandlerNameFromInput(propertyName));
 					});
 				});
 			});
@@ -2422,7 +2422,7 @@
 						model: model
 					});
 
-					assertInputBindingExists(view, '#' + elementId, handlerNameFromInput(propertyName));
+					assertInputBindingExists(view, '#' + elementId, viewHandlerNameFromInput(propertyName));
 				});
 			});
 		});
@@ -2751,7 +2751,7 @@
 				extendSource,
 				subject,
 				propertyName = 'namedInput',
-				handlerName = handlerNameFromInput(propertyName);
+				handlerName = viewHandlerNameFromInput(propertyName);
 
 			var view = {};
 			view[handlerName] = function () { called = true; };
@@ -2792,7 +2792,7 @@
 				extendSource,
 				subject,
 				propertyName = 'dynamicInput',
-				handlerName = handlerNameFromInput(propertyName);
+				handlerName = viewHandlerNameFromInput(propertyName);
 
 			var view = {};
 			view[handlerName] = function () { called = true; };
@@ -2925,7 +2925,7 @@
 			var propertyName = 'dynamicInput',
 				initialValue = 'blah',
 				inputContent = 'Something unremarkable',
-				handlerName = handlerNameFromInput(propertyName);
+				handlerName = viewHandlerNameFromInput(propertyName);
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, inputContent, function () {
@@ -2948,7 +2948,7 @@
 			var propertyName = 'dynamicInput',
 				initialValue = 'blah',
 				inputContent = 'Something unremarkable',
-				handlerName = handlerNameFromInput(propertyName);
+				handlerName = modelChangeHandlerName(propertyName);
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, inputContent, function () {
@@ -2971,7 +2971,7 @@
 			var propertyName = 'dynamicContent',
 				initialValue = 'blah',
 				content = 'Something unremarkable',
-				handlerName = handlerNameFromInput(propertyName);
+				handlerName = modelChangeHandlerName(propertyName);
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenTagWithIdContainsText(propertyName, content, function () {
@@ -2994,7 +2994,7 @@
 				unclickableId = '#dynamicContent',
 				initialValue = 'blah',
 				content = 'Something unremarkable',
-				handlerName = handlerNameFromInput(propertyName);
+				handlerName = modelChangeHandlerName(propertyName);
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenTagWithIdContainsText(propertyName, content, function () {
@@ -3011,13 +3011,13 @@
 			});
 		});
 				
-				test('Given an observable property named to match an input ID / Given a differently named view reference to a non-input element / Model binding is created. ', function () {
+		test('Given an observable property named to match an input ID / Given a differently named view reference to a non-input element / Model binding is created. ', function () {
 			
 			var propertyName = 'dynamicInput',
 				nonInputId = '#dynamicContent',
 				initialValue = 'blah',
 				inputContent = 'Something unremarkable',
-				handlerName = handlerNameFromInput(propertyName);
+				handlerName = modelChangeHandlerName(propertyName);
 
 			givenModelWithObservableProperty(propertyName, initialValue, function (model) {
 				givenInputWithIdHasValue(propertyName, inputContent, function () {
@@ -3034,7 +3034,6 @@
 				});
 			});
 		});
-		// Test bind model to input. Use non-input element as view reference.
 		
 	</script>
 </html>
